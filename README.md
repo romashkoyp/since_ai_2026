@@ -156,3 +156,53 @@ git rebase origin/main
 ---
 
 ## 4. AI-Agent Common Rules
+
+To prevent autonomous coding agents (Google Antigravity, Claude Code, Cursor, Windsurf, GitHub Copilot, OpenAI Codex, Cline, Roo Code, Kiro, Aider) from hallucinating dependencies, reformatting unrelated files, or overwriting teammates' work:
+
+### 4.1 Agent Rule Files by Tool Convention
+Different AI assistants read project instructions from specific files in the repository root. Commit standard rules using the relevant convention:
+
+| Agent / Tool | Rule File Location & Name |
+| :--- | :--- |
+| **Google Antigravity** | `.gemini/rules/`, `CLAUDE.md`, or `.cursorrules` |
+| **Claude Code** | `CLAUDE.md` |
+| **Cursor** | `.cursorrules` or `.cursor/rules/*.mdc` |
+| **Windsurf** | `.windsurfrules` |
+| **GitHub Copilot** | `.github/copilot-instructions.md` |
+| **Cline / Roo Code** | `.clinerules` |
+| **Aider** | `.aider.conf.yml` or `CONVENTIONS.md` |
+| **Kiro / Others** | `AGENT_RULES.md` / `CONTRIBUTING.md` |
+
+*(Tip: You can create `CLAUDE.md` as the single ground truth and symlink or copy it to `.cursorrules` and `.clinerules`).*
+
+#### Standard Rules Content (Ready to Copy):
+```markdown
+# Agent Operating Rules
+1. SCOPE: You may ONLY edit files inside your assigned domain (<assigned-folder>/). Never touch files outside it.
+2. CONTRACTS: Files in `shared/` are READ-ONLY. Import types from `shared/`, never alter or invent fields.
+3. DEPENDENCIES: Never edit `package.json`, lockfiles, or run install commands. Request dependency additions in team chat.
+4. DIFF HYGIENE: Do not touch imports, configs, or formatting of unrelated lines.
+```
+
+---
+
+### 4.2 Strict Prompt Scoping (How Teammates Should Prompt Agents)
+Constrain the agent explicitly to a specific file or folder in every prompt:
+- ❌ **Bad (vague):** *"Add the summary view with statistics."* (Agent will touch router, layout, navbar, and configs)
+- ✅ **Good (scoped):** *"Create `client/src/components/SummaryCard.tsx` consuming types from `shared/contracts.schema.json`. Do not edit any files outside `client/src/components/`."*
+
+---
+
+### 4.3 Pre-Commit Agent Sanitization
+Before committing, inspect and discard unintended agent modifications:
+
+```bash
+# 1. Check which files the agent touched
+git status --short
+
+# 2. Revert any accidental changes to shared configs or lockfiles
+git checkout -- package.json pnpm-lock.yaml package-lock.json tsconfig.json
+
+# 3. Stage only your assigned folder
+git add <domain-folder>/
+```
