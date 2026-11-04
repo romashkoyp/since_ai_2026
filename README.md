@@ -73,77 +73,85 @@ since_ai_2026/
 
 #### Step 1: Start a New Feature from Existing Code (Developer A)
 
-Before writing any code, always ensure your local `main` matches the remote repository:
-
 ```bash
 # 1. Switch to main and pull latest code
 git checkout main
 git pull origin main
 
 # 2. Create and switch to your feature branch
-git checkout -b feat/client-dashboard
+git checkout -b <branch-name>
 ```
 
 ---
 
 #### Step 2: Build & Commit Locally
 
-Work with your AI agent or editor. Keep commits focused on your domain:
-
 ```bash
-# 1. Verify modified files (ensure no accidental files were changed)
+# 1. Verify modified files
 git status --short
 
 # 2. Stage only your domain files
-git add client/
+git add <domain-folder>/
 
-# 3. Commit with a clear descriptive message
-git commit -m "feat(client): implement dashboard layout and mock stats"
+# 3. Commit
+git commit -m "feat(<scope>): <short description>"
 ```
 
 ---
 
-#### Step 3: Sync & Rebase Before Opening PR (Critical Step!)
-
-While Developer A was building, **Developer B** merged changes into `main`. Developer A must rebase onto the newest `main` before submitting:
+#### Step 3: Sync & Rebase Before Opening PR
 
 ```bash
-# 1. Fetch the latest commits from GitHub
+# 1. Fetch latest commits from remote main
 git fetch origin main
 
-# 2. Replay your feature branch commits on top of origin/main
+# 2. Rebase feature branch on top of origin/main
 git rebase origin/main
 ```
+
+*(If conflicts occur: fix files, run `git add <resolved-file>`, and `git rebase --continue`)*
 
 ---
 
 #### Step 4: Push Branch, Open PR & Merge to Main
 
-Once rebase is clean, push your branch to GitHub:
-
 ```bash
-# Push branch to remote (use --force-with-lease if you previously pushed this branch before rebase)
-git push origin feat/client-dashboard --force-with-lease
+# Push branch to remote
+git push origin <branch-name> --force-with-lease
 ```
 
-1. Go to GitHub and click **Compare & pull request**.
-2. Give it a short summary and select a teammate for a quick 30-second review.
-3. Merge using **Squash and Merge** to maintain a clean linear history on `main`.
-4. Delete the remote feature branch on GitHub.
+1. Go to GitHub and click **Compare & pull request** -> **Create pull request**.
+2. Click **Squash and merge** -> **Confirm squash and merge**.
+3. Click **Delete branch**.
+4. **Notify Team:** Send a quick message in team chat: *"Merged `<branch-name>` into main. Please run: `git fetch origin main && git rebase origin/main`"*
 
 ---
 
-#### Step 5: How Parallel Teammates Sync with the New Code (Developer B & Others)
+#### Step 5: Reset Developer A's Local State to Main
 
-Whenever any feature merges into `main`, all other teammates working on active branches should immediately pull those changes into their work:
+After merging on GitHub, Developer A resets local workspace:
 
 ```bash
-# From within your active feature branch:
+# 1. Switch back to main
+git checkout main
+
+# 2. Pull the newly merged commit from GitHub
+git pull origin main
+
+# 3. Clean up local feature branch
+git branch -d <branch-name>
+```
+
+---
+
+#### Step 6: How Parallel Teammates Sync with the New Code (Developer B & Others)
+
+Upon receiving Developer A's notification in chat, teammates run in their active branches:
+
+```bash
 git fetch origin main
 git rebase origin/main
 ```
-
-This ensures everyone always builds on the latest ground truth and prevents huge merge conflicts later.
 
 ---
 
