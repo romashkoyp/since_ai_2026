@@ -48,6 +48,7 @@ const FIELDS: FieldSpec[] = [
 type Files = Partial<Record<AnalysisFileField, File>>;
 
 const MB = 1_000_000; // decimal units, as macOS Finder / Windows Explorer show file sizes (and the server limit)
+const DEFAULT_MAX_MB = 15; // used until /api/model reports the server's MAX_UPLOAD_MB
 
 /** Human-readable size: 553 bytes · 12 KB · 6.6 MB · 1.2 GB */
 function formatSize(bytes: number): string {
@@ -71,6 +72,19 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisRun | null>(null);
   const [formKey, setFormKey] = useState(0);
+  /** bumping a field's key re-creates its <input type=file>, which is the only way to clear a file input */
+  const [inputKeys, setInputKeys] = useState<Partial<Record<AnalysisFileField, number>>>({});
+
+  function removeFile(field: AnalysisFileField) {
+    setFiles((prev) => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+    setInputKeys((prev) => ({ ...prev, [field]: (prev[field] ?? 0) + 1 }));
+    setResult(null);
+    setError(null);
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -99,7 +113,8 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
     return () => clearInterval(t);
   }, [running, startedAt]);
 
-  const maxBytes = (model?.max_upload_mb ?? Infinity) * MB;
+  const maxMb = model?.max_upload_mb ?? DEFAULT_MAX_MB;
+  const maxBytes = maxMb * MB;
   const tooBig = FIELDS.find((f) => (files[f.name]?.size ?? 0) > maxBytes);
   const canSubmit = !!files.datasheet && !!files.telemetry && !tooBig && !running && model?.available !== false;
 
@@ -197,6 +212,7 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
                   {f.required ? <span className="req"> *</span> : <span className="opt"> optional</span>}
                 </span>
                 <input
+                  key={inputKeys[f.name] ?? 0}
                   type="file"
                   name={f.name}
                   accept={f.accept}
@@ -211,11 +227,25 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
                 />
                 <span className="file-help">
                   {over
-                    ? `Too large (${formatSize(file.size)}); the limit is ${model?.max_upload_mb} MB.`
+                    ? `Too large (${formatSize(file.size)}); the limit is ${maxMb} MB per file.`
                     : file
                       ? `${file.name} · ${formatSize(file.size)}`
-                      : f.help}
+                      : `${f.help} Max ${maxMb} MB.`}
                 </span>
+                {file && (
+                  <button
+                    type="button"
+                    className="file-remove link-btn"
+                    disabled={running}
+                    onClick={(e) => {
+                      e.preventDefault(); // inside the <label>: do not open the file chooser
+                      removeFile(f.name);
+                    }}
+                    aria-label={`Remove ${f.label.toLowerCase()} file ${file.name}`}
+                  >
+                    Remove
+                  </button>
+                )}
               </label>
             );
           })}

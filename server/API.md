@@ -306,11 +306,11 @@ Static retrofit business case (BOM, economics, T0 vs T1 capabilities). Not compu
   "required_datasheet_columns": ["asset_id", "control", "motor_rated_rpm", "pump_rated_flow_m3_h",
                                  "pump_rated_head_m", "pump_shutoff_head_m", "npsh3_at_bep_m", "fluid"],
   "min_history_hours": 24,
-  "max_upload_mb": 200
+  "max_upload_mb": 15
 }
 ```
 
-When the engine cannot load: `{"available": false, "reason": "<why>", "max_upload_mb": 200, …}`.
+When the engine cannot load: `{"available": false, "reason": "<why>", "max_upload_mb": 15, …}`.
 
 ---
 
@@ -378,7 +378,7 @@ restarts; the finished run itself is stored permanently.
 | Status | When | Example `detail` |
 |---|---|---|
 | 415 | file is not csv / parquet / json | `telemetry file 'data.xlsx': use CSV, parquet or JSON` |
-| 413 | a file is over `MAX_UPLOAD_MB` | `telemetry file 'big.csv' is larger than 200 MB` |
+| 413 | a file is over `MAX_UPLOAD_MB` | `telemetry file 'big.csv' is larger than 15 MB` |
 | 422 | empty / unreadable file, missing required datasheet columns | `datasheet is missing columns ['control', …]; required: […]` |
 | 422 | a required form field is missing | FastAPI validation list |
 | 503 | the model engine is not installed / failed to load | `model engine unavailable: …` |
@@ -489,7 +489,7 @@ On startup, if there is no run yet, the seed run (`SEED_RUN_PATH`) is saved. Reb
 |---|---|---|
 | `MONGODB_URI`, `MONGODB_DB` | empty, `since_ai` | Atlas connection |
 | `CORS_ORIGINS` | localhost + VM IP | comma-separated allowed origins |
-| `MAX_UPLOAD_MB` | 200 | per uploaded file (the host nginx `client_max_body_size` must allow it too) |
+| `MAX_UPLOAD_MB` | 15 | per uploaded file (the host nginx `client_max_body_size` must allow it too) |
 | `ACTIVE_ALERT_HOURS` | empty | empty = whole analysed period; a number = only alerts that many hours before the last reading |
 | `ENERGY_PRICE_EUR_KWH` | 0.15 | sandbox energy cost |
 | `COOLING_MIN_FLOW_FRACTION` | 0.8 | sandbox cooling requirement |

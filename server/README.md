@@ -73,7 +73,7 @@ table (`asset_id, fault_type, onset_utc, end_utc`); when given, each alert gets 
 |---|---|---|
 | `MONGODB_URI`, `MONGODB_DB` | empty, `since_ai` | Atlas connection; empty = in-memory runs |
 | `CORS_ORIGINS` | localhost + VM | comma-separated |
-| `MAX_UPLOAD_MB` | 200 | per uploaded file |
+| `MAX_UPLOAD_MB` | 15 | per uploaded file (decimal MB; the dialog shows and enforces it too) |
 | `ACTIVE_ALERT_HOURS` | empty | empty = a pump's status uses every alert in the analysed period (matches "Detected issues"); a number = only alerts raised that many hours before its last reading |
 | `ENERGY_PRICE_EUR_KWH` | 0.15 | sandbox energy saving |
 | `COOLING_MIN_FLOW_FRACTION` | 0.8 | share of today's flow the cooled system needs (sandbox cooling margin) |
@@ -115,7 +115,7 @@ docker run --rm -p 8000:8000 since-ai-server
 
 The VM's own nginx (in front of the containers) rejects request bodies over **1 MB by default**, which blocks
 `POST /api/analyses` with an HTML `413 Request Entity Too Large` page. On every VM whose nginx proxies `/api`
-(the frontend VM `since-ai-fe`), allow at least the API's `MAX_UPLOAD_MB` (200 MB per file, several files per
+(the frontend VM `since-ai-fe`), allow at least the API's `MAX_UPLOAD_MB` (15 MB per file, up to six files per
 upload) and give large raw files time to be analysed.
 
 **The deploy workflow (`.github/workflows/deploy.yml`) applies this automatically on every deploy** to each VM that
