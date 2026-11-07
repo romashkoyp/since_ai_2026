@@ -10,7 +10,8 @@ type IconName =
   | "back"
   | "help"
   | "euro"
-  | "shield";
+  | "shield"
+  | "download";
 
 interface Props {
   name: IconName;
@@ -31,6 +32,7 @@ const PATHS: Record<IconName, string> = {
   help: "M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3m.1 4h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z",
   euro: "M4 10h12M4 14h9m6-8.5A7.5 7.5 0 1 0 19 18.5",
   shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z",
+  download: "M12 3v12m0 0 4-4m-4 4-4-4M5 21h14",
 };
 
 export function Icon({ name, size = 18, className }: Props) {

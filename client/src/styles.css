@@ -533,6 +533,25 @@ p {
   margin-bottom: 0.9rem;
 }
 
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: nowrap;
+  margin-left: auto;
+}
+
+.section-actions .search {
+  min-width: 0;
+  width: min(280px, 52vw);
+  flex: 0 1 auto;
+}
+
+.section-actions .download-csv-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .section-title h2 {
   font-size: 1.25rem;
 }

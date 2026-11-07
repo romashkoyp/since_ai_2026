@@ -79,18 +79,19 @@ SAMPLE_ASSETS: list[AssetStatus] = [
 ]
 
 
-def fleet_summary() -> FleetSummary:
-    total = len(SAMPLE_ASSETS)
-    healthy = sum(1 for a in SAMPLE_ASSETS if a.status == "healthy")
-    actionable = sum(1 for a in SAMPLE_ASSETS if a.status == "alert")
-    sensor = sum(1 for a in SAMPLE_ASSETS if a.status == "sensor_issue")
+def fleet_summary(assets: list[AssetStatus] | None = None) -> FleetSummary:
+    assets = SAMPLE_ASSETS if assets is None else assets
+    total = len(assets)
+    healthy = sum(1 for a in assets if a.status == "healthy")
+    actionable = sum(1 for a in assets if a.status == "alert")
+    sensor = sum(1 for a in assets if a.status == "sensor_issue")
     return FleetSummary(
         vessel="M/V Borealis Voyager · Fleet overview",
         watch="Operator triage · read-only",
         critical=0,
         actionable=actionable,
         sensor_faults=sensor,
-        availability_pct=round(100 * healthy / total, 1),
+        availability_pct=round(100 * healthy / total, 1) if total else 0.0,
         healthy=healthy,
         total=total,
         nuisance_suppressed_pct=62.0,
