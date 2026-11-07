@@ -64,6 +64,10 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
   const [files, setFiles] = useState<Files>({});
   const [useMl, setUseMl] = useState(true);
   const [running, setRunning] = useState(false);
+  /** uploading -> queued -> running (server side) */
+  const [phase, setPhase] = useState<"uploading" | "queued" | "running">("uploading");
+  const [startedAt, setStartedAt] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisRun | null>(null);
   const [formKey, setFormKey] = useState(0);
@@ -87,6 +91,13 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
   }, [open, model]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // seconds counter while a run is in progress
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(() => setElapsed(Math.round((Date.now() - startedAt) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, [running, startedAt]);
 
   const maxBytes = (model?.max_upload_mb ?? Infinity) * MB;
   const tooBig = FIELDS.find((f) => (files[f.name]?.size ?? 0) > maxBytes);
@@ -123,10 +134,15 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
     const ac = new AbortController();
     abortRef.current = ac;
     setRunning(true);
+    setPhase("uploading");
+    setStartedAt(Date.now());
+    setElapsed(0);
     setError(null);
     setResult(null);
     try {
-      const run = await createAnalysis(form, ac.signal);
+      const run = await createAnalysis(form, ac.signal, (job) =>
+        setPhase(job.status === "queued" ? "queued" : "running"),
+      );
       setResult(run);
       onCompleted(run);
     } catch (err) {
@@ -217,6 +233,13 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
           <span>Use the ML diagnostician on top of the physics rules (recommended)</span>
         </label>
 
+        {running && phase !== "uploading" && (
+          <p className="hint" role="status">
+            The model runs on the server; large uploads can take a few minutes. Closing this window does not stop it —
+            the dashboard shows the new results after a refresh once it is done.
+          </p>
+        )}
+
         {error && (
           <div className="notice notice-error" role="alert">
             <Icon name="alert" size={18} />
@@ -258,7 +281,9 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
               </button>
               <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
                 <Icon name={running ? "refresh" : "upload"} size={16} className={running ? "spin" : ""} />
-                {running ? "Running the model…" : "Run analysis"}
+                {running
+                  ? `${phase === "uploading" ? "Uploading" : phase === "queued" ? "Waiting for the model" : "Running the model"}… ${elapsed}s`
+                  : "Run analysis"}
               </button>
             </>
           )}

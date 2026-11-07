@@ -77,7 +77,8 @@ server/src/
 | GET | `/api/fault-guide` | Pump screen ("What happens next?") | What each fault means, how urgent, what to do |
 | GET | `/api/scorecard` | Scorecard screen | Retrofit business case (static) |
 | GET | `/api/model` | Upload dialog | Model version, required columns, upload limit |
-| POST | `/api/analyses` | Upload dialog | Upload files → run model → new latest run |
+| POST | `/api/analyses` | Upload dialog | Upload files → `202` job; the model runs in the background |
+| GET | `/api/analyses/jobs/{job_id}` | Upload dialog | Progress of that run: queued / running / completed / failed |
 | GET | `/api/analyses` | — | Recent runs, newest first |
 | GET | `/api/analyses/latest` | App (run strip) | The run the dashboard is showing |
 | GET | `/api/analyses/{run_id}` | — | One run's summary |
@@ -331,7 +332,23 @@ Sensor columns: `motor_speed_rpm, motor_current_a, motor_power_kw, suction_press
 flow_m3_h, fluid_temp_c, bearing_temp_c, motor_winding_temp_c, vibration_rms_mm_s, vibration_accel_rms_g,
 vibration_crest_factor, ambient_temp_c, valve_position_pct` — send the ones the pump has.
 
-**Response `201 Created`** — the run summary (it is now the latest run):
+**Response `202 Accepted`** — the files passed the checks and the model run is **queued in the background**
+(header `Location: /api/analyses/jobs/<job_id>`). A slow run can therefore never be cut off by a proxy timeout
+(nginx answers `504` after 60 s by default):
+
+```json
+{ "job_id": "ecdb5c1bb6d64c8ba4df917f3cd64ffc", "status": "queued", "created_utc": "2026-11-08T00:12:03Z",
+  "label": "datasheet.csv + telemetry.csv", "run": null, "error": null }
+```
+
+### `GET /api/analyses/jobs/{job_id}` — progress of an upload
+
+Poll every 1–2 s until `status` is `completed` or `failed` (the dashboard does this). `status`: `queued` → `running` →
+`completed` (with `run`, the run summary below — it is now the latest run) or `failed` (with `error` and
+`error_status`, e.g. 422 for data the model cannot use). Unknown id → 404. Jobs are kept in memory until the server
+restarts; the finished run itself is stored permanently.
+
+`run` when completed:
 
 ```json
 {
@@ -356,19 +373,22 @@ vibration_crest_factor, ambient_temp_c, valve_position_pct` — send the ones th
 
 `notes` are warnings worth showing (short baseline, missing snapshots, derived columns, pumps skipped…).
 
-**Errors** — body is always `{"detail": "<message for the user>"}`:
+**Errors returned straight away by `POST`** (before anything is queued) — body is `{"detail": "<message for the user>"}`:
 
 | Status | When | Example `detail` |
 |---|---|---|
 | 415 | file is not csv / parquet / json | `telemetry file 'data.xlsx': use CSV, parquet or JSON` |
 | 413 | a file is over `MAX_UPLOAD_MB` | `telemetry file 'big.csv' is larger than 200 MB` |
-| 422 | empty / unreadable file, missing or bad columns, unknown control type, no pump in both files | `datasheet is missing columns ['control', …]; required: […]` |
+| 422 | empty / unreadable file, missing required datasheet columns | `datasheet is missing columns ['control', …]; required: […]` |
 | 422 | a required form field is missing | FastAPI validation list |
 | 503 | the model engine is not installed / failed to load | `model engine unavailable: …` |
 
-Typical time: under 1 s for 2 pumps × 5 days of 1-minute data, ~3 s for 9 pumps × 7 days. Analyses run one at a
-time (a lock) so parallel uploads cannot starve the API; raw 1 Hz files take longer because they are
-aggregated first.
+Problems found while the model runs (unknown control type, no pump in both files, unusable data) come back on the
+job as `status: "failed"` with the same kind of message.
+
+Typical time on a laptop: under 1 s for 2 pumps × 5 days of 1-minute data, ~3.5 s for 9 pumps × 7 days (55 MB,
+~860 MB peak memory). Small cloud VMs can be 10–20× slower. Analyses run one at a time on a background worker so
+parallel uploads cannot starve the API; raw 1 Hz files take longer because they are aggregated first.
 
 ---
 
@@ -389,7 +409,8 @@ aggregated first.
 ```bash
 curl -X POST http://localhost:8000/api/analyses \
   -F datasheet=@datasheet.csv -F telemetry=@telemetry.csv -F baseline=@baseline.csv \
-  -F context=@context.csv -F snapshots=@snapshots.parquet -F use_ml=true
+  -F context=@context.csv -F snapshots=@snapshots.parquet -F use_ml=true      # -> 202 {"job_id": "…"}
+curl http://localhost:8000/api/analyses/jobs/<job_id>                            # repeat until completed
 
 curl http://localhost:8000/api/fleet/summary
 curl "http://localhost:8000/api/alerts?asset_id=PUMP-09&event_class=MACHINE"
@@ -406,7 +427,7 @@ const form = new FormData();
 form.append("datasheet", datasheetFile);
 form.append("telemetry", telemetryFile);
 form.append("use_ml", "true");
-const run = await createAnalysis(form);         // POST /api/analyses → AnalysisRun
+const run = await createAnalysis(form, signal, (job) => console.log(job.status)); // POST + polls the job → AnalysisRun
 const cockpit = await fetchCockpit("PUMP-09");  // reads the new latest run
 // errors throw ApiError { status, message = server's "detail" }
 ```

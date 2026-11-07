@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import db, engine
+from .jobs import JobRunner
 from .models import HealthResponse
 from .routers import analyses, dashboard
 from .settings import get_settings
@@ -22,7 +23,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Logs "MongoDB: connected …" or "MongoDB: not connected …" via uvicorn.error
     app.state.store = db.open_store(settings)
     db.ensure_seed(app.state.store, settings.seed_run_path)
+    app.state.jobs = JobRunner()
     yield
+    app.state.jobs.shutdown()
     app.state.store.close()
 
 

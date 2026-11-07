@@ -49,7 +49,8 @@ Full guide with request/response examples, error codes and the severity and sand
 | GET | `/api/fault-guide` | what each of the 14 fault types means, urgency and steps (`src/data/fault_actions.json`) |
 | GET | `/api/scorecard` | retrofit business case (static) |
 | GET | `/api/model` | installed model, required datasheet columns, upload limit |
-| POST | `/api/analyses` | multipart upload → run the model → `201` run summary |
+| POST | `/api/analyses` | multipart upload → files checked → `202` job (model runs in the background) |
+| GET | `/api/analyses/jobs/{job_id}` | progress of an upload: queued / running / completed (with the run) / failed |
 | GET | `/api/analyses`, `/api/analyses/latest`, `/api/analyses/{run_id}` | run summaries |
 | GET | `/api/analyses/{run_id}/alerts.csv` | alerts in the organisers' template CSV |
 | GET/POST | `/retrofit/*` | the engine's own stateless endpoints (Kaleb's router) |

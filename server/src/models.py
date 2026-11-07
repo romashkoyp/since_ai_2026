@@ -207,6 +207,20 @@ class AnalysisRunSummary(BaseModel):
     notes: list[str] = []
 
 
+class AnalysisJob(BaseModel):
+    """A queued / running / finished model run started by an upload (poll until completed or failed)."""
+
+    job_id: str
+    status: Literal["queued", "running", "completed", "failed"]
+    created_utc: str
+    started_utc: Optional[str] = None
+    finished_utc: Optional[str] = None
+    label: Optional[str] = None
+    run: Optional[AnalysisRunSummary] = Field(default=None, description="Set when completed")
+    error: Optional[str] = Field(default=None, description="Set when failed: message for the user")
+    error_status: Optional[int] = Field(default=None, description="HTTP-style code of the failure (422, 500, 503)")
+
+
 class AnalysisRecord(BaseModel):
     """Everything one model run produced; immutable once stored."""
 

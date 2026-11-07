@@ -168,6 +168,19 @@ export interface AnalysisRun {
   notes: string[];
 }
 
+/** An upload's model run, running in the background on the server (poll until completed / failed) */
+export interface AnalysisJob {
+  job_id: string;
+  status: "queued" | "running" | "completed" | "failed";
+  created_utc: string;
+  started_utc?: string | null;
+  finished_utc?: string | null;
+  label?: string | null;
+  run?: AnalysisRun | null;
+  error?: string | null;
+  error_status?: number | null;
+}
+
 export type UrgencyLevel = "act_now" | "within_a_day" | "next_planned_stop" | "check_sensor";
 
 /** What a fault means and what to do (server: GET /api/fault-guide, from fault_actions.json) */

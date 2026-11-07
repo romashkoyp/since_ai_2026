@@ -107,12 +107,28 @@ def _files(datasheet_csv, telemetry, baseline=None):
     return files
 
 
+def _wait(client, job_id: str, timeout_s: float = 60) -> dict:
+    """poll an upload job until it finishes, like the dashboard does"""
+    import time
+
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        job = client.get(f"/api/analyses/jobs/{job_id}").json()
+        if job["status"] in ("completed", "failed"):
+            return job
+        time.sleep(0.05)
+    raise AssertionError(f"job {job_id} did not finish in {timeout_s}s")
+
+
 def test_upload_runs_model_and_becomes_latest(client, datasheet_csv):
     baseline = minute_summaries(30, "2026-01-01T00:00:00Z", seed=1)
     telemetry = minute_summaries(24, "2026-01-02T06:00:00Z", suction_drop_last_h=6, seed=2)
     r = client.post("/api/analyses", files=_files(datasheet_csv, telemetry, baseline), data={"use_ml": "true"})
-    assert r.status_code == 201, r.text
-    run = r.json()
+    assert r.status_code == 202, r.text
+    assert r.headers["location"] == f"/api/analyses/jobs/{r.json()['job_id']}"
+    job = _wait(client, r.json()["job_id"])
+    assert job["status"] == "completed", job
+    run = job["run"]
     assert run["source"] == "upload" and run["pumps"] == 1 and run["alerts"] >= 1
 
     assert client.get("/api/analyses/latest").json()["run_id"] == run["run_id"]
@@ -144,3 +160,17 @@ def test_upload_size_limit(client, datasheet_csv, max_mb):
     telemetry = minute_summaries(4, "2026-01-01T00:00:00Z")
     r = client.post("/api/analyses", files=_files(datasheet_csv, telemetry))
     assert r.status_code == 413
+
+
+def test_failure_inside_the_run_is_reported_on_the_job(client, datasheet_csv):
+    """columns are fine but the data cannot be analysed -> the job fails with a readable message (no 500 page)"""
+    telemetry = minute_summaries(2, "2026-01-01T00:00:00Z").drop(columns=["operating_mode", "running_fraction"])
+    r = client.post("/api/analyses", files=_files(datasheet_csv, telemetry))
+    assert r.status_code == 202, r.text
+    job = _wait(client, r.json()["job_id"])
+    assert job["status"] == "failed" and job["error"] and job["error_status"] in (422, 500), job
+    assert client.get("/api/analyses/latest").json()["source"] == "seed"   # nothing saved
+
+
+def test_unknown_job_is_404(client):
+    assert client.get("/api/analyses/jobs/nope").status_code == 404

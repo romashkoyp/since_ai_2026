@@ -1,6 +1,7 @@
 import type {
   AlertPrediction,
   AlertSeverity,
+  AnalysisJob,
   AnalysisRun,
   AssetStatus,
   CockpitResponse,
@@ -113,9 +114,48 @@ export async function fetchLatestAnalysis(signal?: AbortSignal): Promise<Analysi
   }
 }
 
-/** Upload pump data and run the model; the new run becomes the dashboard's data */
-export function createAnalysis(form: FormData, signal?: AbortSignal): Promise<AnalysisRun> {
-  return request<AnalysisRun>("/api/analyses", { method: "POST", body: form, signal });
+/** Upload pump data; the server checks the files and queues the model run (answers 202 with a job) */
+export function submitAnalysis(form: FormData, signal?: AbortSignal): Promise<AnalysisJob> {
+  return request<AnalysisJob>("/api/analyses", { method: "POST", body: form, signal });
+}
+
+export function fetchAnalysisJob(jobId: string, signal?: AbortSignal): Promise<AnalysisJob> {
+  return request<AnalysisJob>(`/api/analyses/jobs/${encodeURIComponent(jobId)}`, { signal });
+}
+
+const POLL_MS = 1500;
+const MAX_WAIT_MS = 30 * 60 * 1000;
+
+function wait(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(resolve, ms);
+    signal?.addEventListener("abort", () => {
+      clearTimeout(t);
+      reject(new DOMException("Aborted", "AbortError"));
+    }, { once: true });
+  });
+}
+
+/**
+ * Upload pump data and wait for the model run; the new run becomes the dashboard's data.
+ * The run happens in the background on the server, so a slow analysis cannot hit a proxy timeout.
+ * `onProgress` gets every job update (queued -> running -> completed / failed).
+ */
+export async function createAnalysis(
+  form: FormData,
+  signal?: AbortSignal,
+  onProgress?: (job: AnalysisJob) => void,
+): Promise<AnalysisRun> {
+  let job = await submitAnalysis(form, signal);
+  const started = Date.now();
+  for (;;) {
+    onProgress?.(job);
+    if (job.status === "completed" && job.run) return job.run;
+    if (job.status === "failed") throw new ApiError(job.error_status ?? 500, job.error ?? "The analysis failed.");
+    if (Date.now() - started > MAX_WAIT_MS) throw new ApiError(504, "The analysis is taking unusually long. Refresh the page later to see if it finished.");
+    await wait(POLL_MS, signal);
+    job = await fetchAnalysisJob(job.job_id, signal);
+  }
 }
 
 export function analysisAlertsCsvUrl(runId: string): string {

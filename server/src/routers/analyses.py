@@ -1,8 +1,8 @@
-"""Upload pump data, run the trained model, keep the result as the dashboard's latest run."""
+"""Upload pump data, run the trained model in the background, keep the result as the dashboard's latest run."""
 
 from __future__ import annotations
 
-import logging
+import importlib
 from pathlib import PurePath
 from typing import Annotated
 
@@ -13,13 +13,14 @@ from fastapi.responses import Response
 from .. import engine
 from ..analysis import AnalysisInputs, alerts_csv, run_analysis
 from ..db import RunStore
-from ..deps import get_store, settings_dep
-from ..models import AnalysisRunSummary
+from ..deps import get_jobs, get_store, settings_dep
+from ..jobs import JobRunner
+from ..models import AnalysisJob, AnalysisRecord, AnalysisRunSummary
 from ..settings import Settings
 
-log = logging.getLogger("uvicorn.error")
 router = APIRouter(prefix="/api/analyses", tags=["analyses"])
 Store = Annotated[RunStore, Depends(get_store)]
+Jobs = Annotated[JobRunner, Depends(get_jobs)]
 Config = Annotated[Settings, Depends(settings_dep)]
 ALLOWED_SUFFIXES = {".csv", ".parquet", ".json"}
 _CHUNK = 1 << 20
@@ -56,11 +57,22 @@ def _summary_or_404(store: RunStore, run_id: str) -> AnalysisRunSummary:
     return record.summary
 
 
-# plain `def`: FastAPI runs it in a worker thread, so the CPU-bound analysis does not block the event loop
-@router.post("", response_model=AnalysisRunSummary, status_code=status.HTTP_201_CREATED,
-             summary="Upload pump data and run the model")
+def _check_datasheet_columns(sheet: pd.DataFrame) -> None:
+    """Fail fast (before queueing) on the most common upload mistake."""
+    required = importlib.import_module("retrofit_engine.config").REQUIRED_ASSET_COLUMNS
+    present = {str(c).strip() for c in sheet.columns}
+    missing = [c for c in required if c not in present]
+    if missing:
+        raise ValueError(f"datasheet is missing columns {missing}; required: {list(required)}")
+
+
+# plain `def`: reading / validating uploads is blocking I/O, so FastAPI runs it in a worker thread
+@router.post("", response_model=AnalysisJob, status_code=status.HTTP_202_ACCEPTED,
+             summary="Upload pump data; the model runs in the background (poll the job)")
 def create_analysis(
+    response: Response,
     store: Store,
+    jobs: Jobs,
     settings: Config,
     datasheet: Annotated[UploadFile, File(description="One row per pump (asset_id, control, ratings…)")],
     telemetry: Annotated[UploadFile, File(description="Period to monitor: raw readings or 1-minute summaries")],
@@ -69,7 +81,9 @@ def create_analysis(
     snapshots: Annotated[UploadFile | None, File(description="Vibration waveforms (parquet)")] = None,
     events: Annotated[UploadFile | None, File(description="Optional ground truth to score the alerts")] = None,
     use_ml: Annotated[bool, Form(description="Use the ML diagnostician on top of the physics rules")] = True,
-) -> AnalysisRunSummary:
+) -> AnalysisJob:
+    """Files are checked now (type, size, required columns -> 415 / 413 / 422); the model run is queued and the
+    answer is 202 with a job. Poll GET /api/analyses/jobs/{job_id} until status is completed or failed."""
     try:
         inputs = AnalysisInputs(
             datasheet=_read_upload(datasheet, "datasheet", settings),
@@ -81,19 +95,30 @@ def create_analysis(
         )
         if inputs.datasheet is None or inputs.telemetry is None:
             raise ValueError("both a datasheet file and a telemetry file are required")
-        label = " + ".join(f.filename for f in (datasheet, telemetry) if f is not None and f.filename)
-        record = run_analysis(inputs, settings, source="upload", label=label, use_ml=use_ml)
+        _check_datasheet_columns(inputs.datasheet)
     except engine.EngineUnavailableError as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"model engine unavailable: {exc}") from exc
     except ValueError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
-    except KeyError as exc:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
-                            f"the uploaded data is missing a column the model needs: {exc}") from exc
-    store.save(record)
-    log.info("Analysis %s: %d pumps, %d alerts in %.1fs", record.summary.run_id, record.summary.pumps,
-             record.summary.alerts, record.summary.processing_seconds)
-    return record.summary
+
+    label = " + ".join(f.filename for f in (datasheet, telemetry) if f is not None and f.filename)
+
+    def work() -> AnalysisRecord:
+        record = run_analysis(inputs, settings, source="upload", label=label, use_ml=use_ml)
+        store.save(record)
+        return record
+
+    job = jobs.submit(label, work)
+    response.headers["Location"] = f"/api/analyses/jobs/{job.job_id}"
+    return job
+
+
+@router.get("/jobs/{job_id}", response_model=AnalysisJob, summary="Progress of an upload's model run")
+def get_job(job_id: str, jobs: Jobs) -> AnalysisJob:
+    job = jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Unknown job {job_id} (jobs are kept until the server restarts)")
+    return job
 
 
 @router.get("", response_model=list[AnalysisRunSummary], summary="Recent runs, newest first")
