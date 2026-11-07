@@ -25,7 +25,8 @@ retrofit/build/
 retrofit/logs/
 retrofit/data/
 retrofit/shards/
-retrofit/mlmodel/
+retrofit/mlmodel/**
+!retrofit/mlmodel/README.md
 retrofit/src/retrofit_sim.egg-info/
 retrofit/*.pkl
 retrofit/**/*.pkl
