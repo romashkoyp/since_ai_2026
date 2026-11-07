@@ -194,7 +194,8 @@ export default function App() {
           <p className="run-strip" role="status">
             <Icon name="clock" size={14} />
             <span>
-              Results from model <strong>{run.model_version}</strong> for {run.pumps} pump{run.pumps === 1 ? "" : "s"}
+              Results from model <strong title={`Model version ${run.model_version}`}>ZeroFault</strong> for {run.pumps}{" "}
+              pump{run.pumps === 1 ? "" : "s"}
               {run.data_end_utc ? ` · data up to ${friendlyTime(run.data_end_utc)}` : ""}
               {" · "}
               {run.source === "seed" ? "built-in demo data" : (run.label ?? "uploaded data")}

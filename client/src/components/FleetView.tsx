@@ -174,7 +174,9 @@ export function FleetView({
                         <strong>{asset.asset_id}</strong>
                         <StatusBadge severity={sev} />
                       </div>
-                      <p className="pump-tile-system">{systemLabel(asset.system)}</p>
+                      <p className="pump-tile-system" title={systemLabel(asset.system)}>
+                        {systemLabel(asset.system)}
+                      </p>
                       <div className="pump-tile-row">
                         <span>Health</span>
                         <HealthBar
