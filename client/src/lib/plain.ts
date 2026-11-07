@@ -1,6 +1,6 @@
-import type { AlertPrediction, AlertSeverity, AssetStatus, FaultType } from "../types/alerts";
+import type { AlertPrediction, AlertSeverity, AssetStatus, FaultType, Severity } from "../types/alerts";
 
-export type Severity = "act_now" | "attention" | "sensor" | "ok";
+export type { Severity };
 
 export interface FaultExplainer {
   title: string;
@@ -105,6 +105,7 @@ export function explainFault(fault: FaultType | string | null | undefined): Faul
 }
 
 export function severityOf(asset: AssetStatus): Severity {
+  if (asset.severity) return asset.severity;
   if (asset.status === "sensor_issue") return "sensor";
   if (asset.status !== "alert") return "ok";
   if (asset.rul_hours != null && asset.rul_hours <= 24) return "act_now";

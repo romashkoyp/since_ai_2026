@@ -35,6 +35,9 @@ export interface AlertPrediction {
   correct?: boolean | null;
 }
 
+/** Fleet triage level computed by the server from the open alerts' urgency */
+export type Severity = "act_now" | "attention" | "sensor" | "ok";
+
 export interface AssetStatus {
   asset_id: string;
   site: string;
@@ -46,6 +49,8 @@ export interface AssetStatus {
   open_alerts: number;
   fault_summary?: string | null;
   rul_hours?: number | null;
+  severity?: Severity | null;
+  last_data_utc?: string | null;
 }
 
 export interface FleetSummary {
@@ -57,7 +62,10 @@ export interface FleetSummary {
   availability_pct: number;
   healthy: number;
   total: number;
-  nuisance_suppressed_pct: number;
+  nuisance_suppressed_pct?: number | null;
+  run_id?: string | null;
+  model_version?: string | null;
+  data_end_utc?: string | null;
 }
 
 export interface TrendPoint {
@@ -103,6 +111,10 @@ export interface CockpitResponse {
   cooling_safe_flow_m3h?: number | null;
   spectrum_note?: string | null;
   rated_rpm?: number | null;
+  /** Fault behind the diagnosis (most severe open alert) */
+  fault_type?: FaultType | null;
+  /** Physics assumptions behind the mitigation simulator numbers */
+  sandbox_note?: string | null;
 }
 
 export interface ScorecardResponse {
@@ -120,7 +132,43 @@ export interface ScorecardResponse {
 export interface HealthResponse {
   status: string;
   service: string;
+  database?: string | null;
+  model?: string | null;
 }
+
+export interface ModelInfo {
+  available: boolean;
+  model_version?: string | null;
+  physics_version?: string | null;
+  classes: string[];
+  calibrated?: boolean | null;
+  reason?: string | null;
+  required_datasheet_columns: string[];
+  min_history_hours?: number | null;
+  max_upload_mb: number;
+}
+
+/** One model run over uploaded (or bundled demo) data; the dashboard shows the latest */
+export interface AnalysisRun {
+  run_id: string;
+  created_utc: string;
+  source: "upload" | "seed";
+  label?: string | null;
+  model_version: string;
+  physics_version?: string | null;
+  use_ml: boolean;
+  pumps: number;
+  alerts: number;
+  ml_overrides: number;
+  by_fault_type: Record<string, number>;
+  data_start_utc?: string | null;
+  data_end_utc?: string | null;
+  processing_seconds: number;
+  scored: boolean;
+  notes: string[];
+}
+
+export type AnalysisFileField = "datasheet" | "telemetry" | "baseline" | "context" | "snapshots" | "events";
 
 export type ScreenId = "fleet" | "cockpit" | "scorecard";
 

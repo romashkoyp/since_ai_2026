@@ -1,0 +1,8 @@
+# Server image is built from the repo root (server/Dockerfile); send only what it copies.
+**
+!server/requirements.txt
+!server/src/
+!server/seed/
+!retrofit_engine/
+**/__pycache__/
+**/*.py[cod]

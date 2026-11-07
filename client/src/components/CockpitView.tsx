@@ -142,7 +142,7 @@ export function CockpitView({
 
   const severity = asset ? severityOf(asset) : data.risk_at_100 > 0.5 ? "act_now" : "ok";
   const isHealthy = severity === "ok" && /no active/i.test(data.diagnosis);
-  const fault = explainFault(alert?.fault_type);
+  const fault = explainFault(data.fault_type ?? alert?.fault_type);
   const plainTitle = isHealthy ? "Working normally" : diagnosisPlain(data.diagnosis);
   const timeLeft = timeLeftLabel(asset?.rul_hours);
   const rulHours = asset?.rul_hours ?? null;
@@ -351,7 +351,7 @@ export function CockpitView({
             {data.trends.length > 0 && (
               <details className="issue-section-acc">
                 <summary>Sensor trends</summary>
-                <p className="hint">Discharge head, suction pressure, and motor power. Dashed line = safe limit.</p>
+                <p className="hint">Hourly averages of the sensors behind this diagnosis. Dashed line = alarm limit.</p>
                 <div className="trend-grid">
                   {data.trends.map((series) => (
                     <Sparkline
@@ -422,8 +422,8 @@ export function CockpitView({
             ) : (
               <>
                 <p className="lead">
-                  There is a <strong className="text-danger">{riskNowPct}% chance</strong> of damage if the pump keeps
-                  running at full speed (risk at 100% from the mitigation model).
+                  The model is <strong className="text-danger">{riskNowPct}% sure</strong> this problem is real. Running
+                  at full speed keeps the damage growing.
                 </p>
                 <ol className="timeline">
                   <li className="tl-now">
@@ -520,7 +520,7 @@ export function CockpitView({
 
             <div className="cooling-bar">
               <div className="cooling-bar-head">
-                <span>Main engine HT cooling margin</span>
+                <span>Cooling margin at the lowest speed</span>
                 <strong className={coolingOk ? "text-ok" : "text-danger"}>
                   {data.cooling_margin_pct}%
                   {data.cooling_safe_flow_m3h != null && (
@@ -580,6 +580,7 @@ export function CockpitView({
                   </dd>
                 </div>
               </dl>
+              {data.sandbox_note && <p className="hint">{data.sandbox_note}</p>}
             </details>
           </section>
         </div>
