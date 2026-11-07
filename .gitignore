@@ -1,1 +1,25 @@
+# Secrets / environment
 .env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Per-domain large artifacts (retrofit = Since AI 2026 cooling-pump project)
+retrofit/.venv/
+retrofit/build/
+retrofit/logs/
+retrofit/data/
+retrofit/shards/
+retrofit/mlmodel/
+retrofit/src/retrofit_sim.egg-info/
+retrofit/*.pkl
+retrofit/**/*.pkl
+retrofit/**/*.npz
+
+# OS / editor cruft
+Thumbs.db
+.DS_Store

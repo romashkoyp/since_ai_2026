@@ -1,8 +1,6 @@
 # Team Collaboration & Since AI Hackathon 2026 Workflow
 
-## 1. Quick Onboarding & Repo Access
-
-Repository: <https://github.com/romashkoyp/since_ai_2026>
+## 1. Quick Onboarding & Repo AccessRepository: <https://github.com/romashkoyp/since_ai_2026>
 
 ### 1.1 Invite Collaborators & Grant Write Access
 
