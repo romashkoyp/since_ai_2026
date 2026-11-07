@@ -108,3 +108,6 @@ export interface HealthResponse {
 }
 
 export type ScreenId = "fleet" | "cockpit" | "scorecard";
+
+/** Why it failed vs what happens next */
+export type CockpitMode = "diagnose" | "predict";

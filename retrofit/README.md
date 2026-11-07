@@ -16,6 +16,8 @@ flow, and agent rules). **Do not edit files outside `retrofit/` unless you own t
 - `analysis/` — diagnostic scripts, technical model deep-dive report, detector design doc,
   figures, and a few measured diagnostic dumps. All re-runnable from any checkout
   (`ROOT = Path(__file__).resolve().parents[1]`).
+- `mlmodel/` — **trained model artifacts** (`.pkl`, LightGBM text, etc.). Code stays in
+  `sentry/`; weights go here (or `build/mlmodel/`). See `mlmodel/README.md`.
 
 ## Local re-run (laptop)
 
@@ -50,5 +52,17 @@ retrofit/
 ├── configs/            (fleet_public.yaml)
 ├── sentry/             (our detector + LUMI ML pipeline)
 ├── lumi/               (SLURM + bootstrap scripts)
-└── analysis/           (reports + diagnostics, re-runnable)
+├── analysis/           (reports + diagnostics, re-runnable)
+├── mlmodel/            (trained weights — gitignored except README.md)
+└── build/mlmodel/      (alternate trainer output path — also gitignored)
 ```
+
+### Where to put a new model
+
+| Kind | Path |
+| --- | --- |
+| Train / feature / predict **code** | `sentry/` |
+| Trained **weights / bundles** | `mlmodel/` or `build/mlmodel/` |
+| LUMI job scripts | `lumi/` |
+
+Do **not** put model files in `client/`, `server/`, or `shared/`. Details: [`mlmodel/README.md`](./mlmodel/README.md).
