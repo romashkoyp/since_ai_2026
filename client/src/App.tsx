@@ -1,82 +1,69 @@
-import { useEffect, useState } from "react";
-import { fetchAlerts, fetchAssets, fetchHealth } from "./api/client";
-import type { AlertPrediction, AssetStatus } from "./types/alerts";
-import { AlertList } from "./components/AlertList";
-import { FleetStrip } from "./components/FleetStrip";
+import { useState } from "react";
+import { CockpitView } from "./components/CockpitView";
+import { FleetView } from "./components/FleetView";
+import { ScorecardView } from "./components/ScorecardView";
+import {
+  DUMMY_ALERTS,
+  DUMMY_ASSETS,
+  DUMMY_SUMMARY,
+} from "./data/dummy";
+import type { ScreenId } from "./types/alerts";
 
 export default function App() {
-  const [alerts, setAlerts] = useState<AlertPrediction[]>([]);
-  const [assets, setAssets] = useState<AssetStatus[]>([]);
-  const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
-  const [apiOk, setApiOk] = useState<boolean | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [screen, setScreen] = useState<ScreenId>("fleet");
+  const [selectedAsset, setSelectedAsset] = useState<string | null>("PUMP-08");
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const health = await fetchHealth();
-        if (!cancelled) setApiOk(health.status === "ok");
-
-        const [alertData, assetData] = await Promise.all([
-          fetchAlerts(selectedAsset ?? undefined),
-          fetchAssets(),
-        ]);
-        if (cancelled) return;
-        setAlerts(alertData);
-        setAssets(assetData);
-      } catch (err) {
-        if (!cancelled) {
-          setApiOk(false);
-          setError(err instanceof Error ? err.message : "Failed to reach API");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedAsset]);
+  function openCockpit(assetId: string) {
+    setSelectedAsset(assetId);
+    setScreen("cockpit");
+  }
 
   return (
-    <div className="app">
-      <header className="topbar">
+    <div className="app-shell">
+      <header className="shell-top">
         <div className="brand-block">
           <p className="brand">Since AI</p>
-          <h1>Operator Cockpit</h1>
-          <p className="lede">Fleet triage for cooling-pump alerts — sample wiring to the Python API.</p>
+          <p className="product">RETROFIT operator cockpit · demo data</p>
         </div>
-        <div className={`api-pill ${apiOk === true ? "ok" : apiOk === false ? "bad" : ""}`}>
-          API {apiOk === null ? "…" : apiOk ? "connected" : "offline"}
-        </div>
+        <nav className="tabs" aria-label="Screens">
+          <button
+            type="button"
+            className={screen === "fleet" ? "active" : ""}
+            onClick={() => setScreen("fleet")}
+          >
+            Fleet triage
+          </button>
+          <button
+            type="button"
+            className={screen === "cockpit" ? "active" : ""}
+            onClick={() => setScreen("cockpit")}
+          >
+            Asset cockpit
+          </button>
+          <button
+            type="button"
+            className={screen === "scorecard" ? "active" : ""}
+            onClick={() => setScreen("scorecard")}
+          >
+            Retrofit scorecard
+          </button>
+        </nav>
+        <div className="api-pill ok">Demo mode</div>
       </header>
 
-      {error && <p className="banner error">{error}</p>}
-
-      <FleetStrip
-        assets={assets}
-        selected={selectedAsset}
-        onSelect={(id) => setSelectedAsset((prev) => (prev === id ? null : id))}
-      />
-
-      <section className="alerts-section">
-        <div className="section-head">
-          <h2>{selectedAsset ? `Alerts · ${selectedAsset}` : "Open alerts"}</h2>
-          {selectedAsset && (
-            <button type="button" className="text-btn" onClick={() => setSelectedAsset(null)}>
-              Clear filter
-            </button>
-          )}
-        </div>
-        {loading ? <p className="muted">Loading…</p> : <AlertList alerts={alerts} />}
-      </section>
+      {screen === "fleet" && (
+        <FleetView
+          summary={DUMMY_SUMMARY}
+          assets={DUMMY_ASSETS}
+          alerts={DUMMY_ALERTS}
+          selected={selectedAsset}
+          onSelect={openCockpit}
+        />
+      )}
+      {screen === "cockpit" && (
+        <CockpitView assetId={selectedAsset} onBack={() => setScreen("fleet")} />
+      )}
+      {screen === "scorecard" && <ScorecardView />}
     </div>
   );
 }

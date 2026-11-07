@@ -1,4 +1,11 @@
-import type { AlertPrediction, AssetStatus, HealthResponse } from "../types/alerts";
+import type {
+  AlertPrediction,
+  AssetStatus,
+  CockpitResponse,
+  FleetSummary,
+  HealthResponse,
+  ScorecardResponse,
+} from "../types/alerts";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 
@@ -22,4 +29,16 @@ export function fetchAlerts(assetId?: string): Promise<AlertPrediction[]> {
 
 export function fetchAssets(): Promise<AssetStatus[]> {
   return getJson<AssetStatus[]>("/api/assets");
+}
+
+export function fetchFleetSummary(): Promise<FleetSummary> {
+  return getJson<FleetSummary>("/api/fleet/summary");
+}
+
+export function fetchCockpit(assetId: string): Promise<CockpitResponse> {
+  return getJson<CockpitResponse>(`/api/cockpit/${encodeURIComponent(assetId)}`);
+}
+
+export function fetchScorecard(): Promise<ScorecardResponse> {
+  return getJson<ScorecardResponse>("/api/scorecard");
 }
