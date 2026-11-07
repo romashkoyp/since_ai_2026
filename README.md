@@ -36,15 +36,19 @@ Repository: <https://github.com/romashkoyp/since_ai_2026>
 
 ## 2. Team Architecture & Ownership
 
-### 2.1 Role & Domain Allocation (just for example)
+### 2.1 Role & Domain Allocation
 
-- **Client / UI Lead:** Page layouts, UI state, user flows, and mock integration.
-- **Backend / API Lead:** Core API routes, controllers, and integration logic.
-- **AI / Integration Lead:** Prompt pipelines, LLM wrappers, external webhooks/services.
-- **Data & Schema Lead (Sync Lead):** Database models, migrations, seed script, and contract arbiter.
-- **Demo & QA / Pitch Lead:** Pitch slides, live test scenarios, fallback video recording, and contract verification.
+| Role | Folder | Owns |
+| :--- | :--- | :--- |
+| **Client / UI Lead** | `client/` | Streamlit / UI layouts, UI state, user flows, mock integration |
+| **Backend / API Lead** | `server/` | API routes, controllers, integration logic |
+| **AI / Integration Lead** | `retrofit/` | Detector (SENTRY), sim, LUMI, analysis, ML pipelines |
+| **Data & Schema Lead (Sync Lead)** | `db/` (+ arbiter of `shared/`) | Migrations, seeds, and shared contract changes |
+| **Demo & QA / Pitch Lead** | `docs/` | Pitch notes, demo flow, architecture diagrams, contract verification |
 
-### 2.2 Directory Boundaries & Monorepo Structure (for example)
+Product UI and API go in `client/` and `server/`. Detection, simulation, and scoring stay in `retrofit/`. Cross-domain alert shapes live only in `shared/`.
+
+### 2.2 Directory Boundaries & Monorepo Structure
 
 Hard boundaries to eliminate file collisions between teammates and AI agents:
 
@@ -54,12 +58,14 @@ since_ai_2026/
 ├── client/          # Frontend application & components
 ├── server/          # Backend API services & controllers
 ├── db/              # Migrations, schema definitions, and seed data
-└── docs/            # Pitch notes, demo flow, architecture diagrams
+├── docs/            # Pitch notes, demo flow, architecture diagrams
+└── retrofit/        # Cooling-pump sim, sentry, LUMI, and analysis (AI domain)
 ```
 
 ### 2.3 Single Source of Truth (Contracts & Schemas)
 
-- Contract file: (`shared/contracts.schema.json`).
+- Contract file: (`shared/contracts.schema.json`) — alert / prediction boundary between `retrofit`, `client`, and `server`.
+- Dataset table schemas remain in `retrofit/src/retrofit_sim/schema.py` (AI-domain internal).
 - Any update to request/response shapes requires team alignment in chat before updating.
 - Client and server code must import types from `shared/` rather than inventing parallel models.
 

@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/romashkoyp/since_ai_2026/shared/contracts.schema.json",
+  "title": "Since AI 2026 Shared Contracts",
+  "description": "Product-boundary contracts between retrofit (AI), client (UI), and server (API). Dataset table schemas stay in retrofit/src/retrofit_sim/schema.py. Align in team chat before changing fields.",
+  "definitions": {
+    "AlertPrediction": {
+      "type": "object",
+      "description": "One scored alert row. Matches retrofit PREDICTION_SCHEMA and scoring.REQUIRED. retrofit writes CSV with these columns; client/server consume the same shape.",
+      "required": [
+        "asset_id",
+        "alert_time_utc",
+        "event_class",
+        "fault_type",
+        "confidence"
+      ],
+      "properties": {
+        "asset_id": {
+          "type": "string",
+          "description": "Asset the alert refers to (e.g. PUMP-01 … PUMP-12)."
+        },
+        "alert_time_utc": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO-8601 UTC time the alert would have been raised (must only use data up to this time)."
+        },
+        "event_class": {
+          "type": "string",
+          "enum": ["MACHINE", "SENSOR"],
+          "description": "Predicted class: machine condition or instrument / data problem."
+        },
+        "fault_type": {
+          "type": "string",
+          "enum": [
+            "BEARING_WEAR",
+            "SUCTION_STRAINER_CLOGGING",
+            "CAVITATION",
+            "DISCHARGE_RESTRICTION",
+            "MISALIGNMENT",
+            "IMBALANCE",
+            "IMPELLER_WEAR",
+            "AIR_ENTRAINMENT",
+            "SENSOR_DRIFT",
+            "SENSOR_STUCK",
+            "SENSOR_CALIBRATION_SHIFT",
+            "SENSOR_NOISE_SPIKES",
+            "COMMUNICATION_LOSS",
+            "UNKNOWN"
+          ],
+          "description": "Predicted fault type (benchmark taxonomy) or UNKNOWN."
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Model confidence in [0, 1]."
+        },
+        "evidence": {
+          "type": ["string", "null"],
+          "description": "Short human-readable evidence (channels, deviations)."
+        },
+        "recommended_action": {
+          "type": ["string", "null"],
+          "description": "Human-reviewable recommendation (inspection, maintenance, sensor check)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "AlertPredictionList": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/AlertPrediction" },
+      "description": "Batch of alert predictions (CSV rows or API payload)."
+    }
+  }
+}
