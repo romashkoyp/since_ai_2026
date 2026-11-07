@@ -1,3 +1,45 @@
+# ZeroFault — RETROFIT AI 2026 (Business Turku / Elomatic Track)
+
+**Make Existing Ship & Industrial Cooling Pumps Intelligent — Read-Only, Offline-Capable, No PLC Writes.**
+
+ZeroFault turns existing VFD/MCC signals and low-cost retrofit sensors into early, explainable fault warnings using a deterministic 3-layer stack:
+1. **Layer 1 — Physics v5 + Hybrid Diagnostic Engine (`joice_physics_rules/diag2.py` & `retrofit_engine/`):** Pump-curve affinity laws ($H \propto n^2, P \propto n^3$), Antoine vapor-pressure NPSH margin ($\sigma$), bearing envelope ratios (`b_idx`), and fixed-reference sensor drift isolation.
+   - **Measured Benchmark Performance:** **93.7 / 100** on Company Train (**26/26 [100%]** observable faults detected, **24/26 [92.3%]** fault-type recall) and **95.8 / 100** on Company Validation (**9/9 [100%]** detected, **8/9 [88.9%]** fault-type recall, **0.00** false alerts/pump-day).
+   - **Hidden Test Submission (`PUMP-10..12`):** [`joice_physics_rules/dashboard_data_fine_tuned/predictions_test.csv`](joice_physics_rules/dashboard_data_fine_tuned/predictions_test.csv) (and [`hybrid_model/output_csv/predictions_test.csv`](hybrid_model/output_csv/predictions_test.csv)).
+2. **Layer 2 — Laya Deterministic Severity Triage (`server/src/severity.py` & `client/src/components/AlertTriage.tsx`):** Categorizes every alert into `SEVERE` (`MACHINE` $\ge 0.75$), `MODERATE` ($\ge 0.50$, including verified `SENSOR` faults), `MINIMAL` ($< 0.50$), and `LOW_CONFIDENCE` (`UNKNOWN`) in **<0.6 ms**, suppressing **72%–86%** of low-confidence nuisance alerts by default.
+   - **Measured Economic Value (`examples/business_case.py`):** **€7,198/yr** net savings per duty pump with a **0.6-year (~7-month) payback** on a €4,500 retrofit kit.
+3. **Layer 3 — Needle Context & Manual Retrieval (+ Optional Local LLM Copilot):** Triggered on `MODERATE` / `SEVERE` alerts to correlate `maintenance.csv` operator notes and OEM manuals for zero-retraining transfer to new vessels and rotating machinery.
+
+---
+
+## Quick Start: How Evaluators & Benefiting Companies Run ZeroFault Themselves
+
+### Option A — 1-Command Self-Hosted Docker Stack (Air-Gapped / Shipboard Edge Ready)
+```bash
+git clone https://github.com/romashkoyp/since_ai_2026.git
+cd since_ai_2026
+docker compose up --build
+```
+- **Operator Cockpit UI:** `http://localhost:3000` (Fleet Overview, Pump Cockpit with Laya Alert Triage & Read-Only VFD Mitigation Simulator, Retrofit ROI Scorecard, and live **"Analyze Pump Data"** upload).
+- **FastAPI + OpenAPI Docs:** `http://localhost:8000/docs` (`/api/alerts?severity=SEVERE&severity=MODERATE`, `/api/analyses`, `/retrofit/analyze`).
+- Runs 100% offline using the embedded run store (`server/seed/demo_run.json`), with optional MongoDB Atlas sync when `MONGODB_URI` is set.
+
+### Option B — Bring Your Own Pump CSV/Parquet (No Retraining Required)
+Any ship owner or plant engineer can analyze a new pump immediately via the UI (**Analyze Pump Data**) or `POST /retrofit/analyze` by supplying two tables:
+1. **`datasheet.csv`:** 1 row per pump with nameplate specs (`asset_id`, `control`, `motor_rated_rpm`, `pump_rated_flow_m3_h`, `pump_rated_head_m`, `pump_shutoff_head_m`, `npsh3_at_bep_m`, `fluid`).
+2. **`telemetry.csv` / `.parquet`:** 1-min or 1 Hz readings (`motor_current_a`, `discharge_pressure_kpa`, plus any optional `T1`/`T2` sensors). The first 24–30 h of steady running automatically establishes the per-regime baseline.
+
+### Option C — Reproduce Benchmark Scores & Test Predictions Locally
+```bash
+# Run official benchmark evaluation (train: 93.7, validation: 95.8, 32/35 fault types correct)
+python joice_physics_rules/lab2.py <path-to-RETROFIT_AI_PARTICIPANTS_2026> -v
+
+# Run Laya severity categorizer unit & benchmark suite (6/6 tests)
+cd server && python -m unittest discover -s tests -v
+```
+
+---
+
 # Team Collaboration & Since AI Hackathon 2026 Workflow
 
 ## 1. Quick Onboarding & Repo Access
