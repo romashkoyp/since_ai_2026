@@ -1319,6 +1319,27 @@ p {
   color: var(--ink-2);
 }
 
+.triage-badges {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.triage-all-ok {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.6rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
 .triage-severity.alert-sev-severe {
   color: var(--danger);
 }
