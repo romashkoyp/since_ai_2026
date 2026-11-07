@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-180 -180 360 360" width="360" height="360" role="img" aria-label="ZeroFault mark">
+  <defs>
+    <clipPath id="zf-left"><polygon points="-300,-300 192.9,-300 -192.9,300 -300,300"/></clipPath>
+    <clipPath id="zf-right"><polygon points="192.9,-300 300,-300 300,300 -192.9,300"/></clipPath>
+    <mask id="zf-gap" maskUnits="userSpaceOnUse" x="-200" y="-200" width="400" height="400">
+      <rect x="-200" y="-200" width="400" height="400" fill="#fff"/>
+      <polygon points="95.6,-200 161.6,-200 -95.6,200 -161.6,200" fill="#000"/>
+    </mask>
+    <g id="zf-shape">
+      <path fill-rule="evenodd" d="M0,-170 L147.2,-85 L147.2,85 L0,170 L-147.2,85 L-147.2,-85 Z M0,-126 L109.1,-63 L109.1,63 L0,126 L-109.1,63 L-109.1,-63 Z"/>
+      <circle r="80" fill="none" stroke-width="28"/>
+    </g>
+  </defs>
+  <g mask="url(#zf-gap)">
+    <use href="#zf-shape" fill="#F5A23A" stroke="#F5A23A" clip-path="url(#zf-left)"/>
+    <use href="#zf-shape" fill="#3B9BD6" stroke="#3B9BD6" clip-path="url(#zf-right)"/>
+  </g>
+  <polygon points="91,-170 125,-170 -91,170 -125,170" fill="#F5A23A"/>
+</svg>
