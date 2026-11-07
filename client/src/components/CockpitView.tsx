@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchCockpit } from "../api/client";
+import { AlertTriage } from "./AlertTriage";
 import { getDummyCockpit } from "../data/dummy";
 import {
   channelLabel,
@@ -251,6 +252,7 @@ export function CockpitView({
 
       {mode === "diagnose" ? (
         <div className="tab-body" role="tabpanel">
+          <AlertTriage alerts={assetAlerts} />
           <section className="card diagnose-panel">
             <div className="card-title-row">
               <h2>Detected issues</h2>

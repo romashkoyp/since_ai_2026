@@ -15,6 +15,7 @@ from .models import (
     FleetSummary,
     HealthResponse,
     ScorecardResponse,
+    Severity,
 )
 from .sample_data import (
     COCKPITS,
@@ -57,18 +58,32 @@ def health() -> HealthResponse:
 def list_alerts(
     asset_id: str | None = Query(default=None, description="Optional asset filter"),
     event_class: str | None = Query(default=None, description="MACHINE or SENSOR"),
+    severity: list[Severity] | None = Query(
+        default=None,
+        description="Repeat to include triage bands, e.g. ?severity=SEVERE&severity=MODERATE",
+    ),
 ) -> list[AlertPrediction]:
     alerts = SAMPLE_ALERTS
     if asset_id:
         alerts = [a for a in alerts if a.asset_id == asset_id]
     if event_class:
         alerts = [a for a in alerts if a.event_class.value == event_class.upper()]
+    if severity:
+        alerts = [a for a in alerts if a.severity in severity]
     return alerts
 
 
 @app.get("/api/alerts/{asset_id}", response_model=list[AlertPrediction])
-def alerts_for_asset(asset_id: str) -> list[AlertPrediction]:
+def alerts_for_asset(
+    asset_id: str,
+    severity: list[Severity] | None = Query(
+        default=None,
+        description="Repeat to include triage bands, e.g. ?severity=SEVERE&severity=MODERATE",
+    ),
+) -> list[AlertPrediction]:
     alerts = [a for a in SAMPLE_ALERTS if a.asset_id == asset_id]
+    if severity:
+        alerts = [a for a in alerts if a.severity in severity]
     if not alerts:
         raise HTTPException(status_code=404, detail=f"No alerts for {asset_id}")
     return alerts
@@ -102,6 +117,7 @@ def get_cockpit(asset_id: str) -> CockpitResponse:
             diagnosis=top.fault_type.value.replace("_", " ").title(),
             event_class=top.event_class,
             confidence=top.confidence,
+            severity=top.severity,
             safe_window="Monitor · no dedicated sandbox model yet",
             evidence=[],
             sop=[

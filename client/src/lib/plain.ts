@@ -1,4 +1,4 @@
-import type { AlertPrediction, AssetStatus, FaultType } from "../types/alerts";
+import type { AlertPrediction, AlertSeverity, AssetStatus, FaultType } from "../types/alerts";
 
 export type Severity = "act_now" | "attention" | "sensor" | "ok";
 
@@ -110,6 +110,22 @@ export function severityOf(asset: AssetStatus): Severity {
   if (asset.rul_hours != null && asset.rul_hours <= 24) return "act_now";
   return "attention";
 }
+
+/** Server-derived band, with the same deterministic fallback for bundled demo rows. */
+export function alertSeverity(alert: AlertPrediction): AlertSeverity {
+  if (alert.severity) return alert.severity;
+  if (alert.fault_type === "UNKNOWN") return "LOW_CONFIDENCE";
+  if (alert.confidence < 0.5) return "MINIMAL";
+  if (alert.event_class === "MACHINE" && alert.confidence >= 0.75) return "SEVERE";
+  return "MODERATE";
+}
+
+export const ALERT_SEVERITY_LABEL: Record<AlertSeverity, string> = {
+  SEVERE: "Severe",
+  MODERATE: "Moderate",
+  MINIMAL: "Minimal",
+  LOW_CONFIDENCE: "Low confidence",
+};
 
 export const SEVERITY_ORDER: Record<Severity, number> = {
   act_now: 0,

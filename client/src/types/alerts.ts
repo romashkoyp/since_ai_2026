@@ -2,6 +2,8 @@
 
 export type EventClass = "MACHINE" | "SENSOR";
 
+export type AlertSeverity = "SEVERE" | "MODERATE" | "MINIMAL" | "LOW_CONFIDENCE";
+
 export type FaultType =
   | "BEARING_WEAR"
   | "SUCTION_STRAINER_CLOGGING"
@@ -24,6 +26,7 @@ export interface AlertPrediction {
   event_class: EventClass;
   fault_type: FaultType;
   confidence: number;
+  severity?: AlertSeverity | null;
   evidence?: string | null;
   recommended_action?: string | null;
   /** Ground-truth fault when available (physics dashboard export) */
@@ -81,6 +84,7 @@ export interface CockpitResponse {
   diagnosis: string;
   event_class: EventClass;
   confidence: number;
+  severity?: AlertSeverity | null;
   safe_window: string;
   evidence: EvidenceRow[];
   sop: string[];
