@@ -46,6 +46,7 @@ Full guide with request/response examples, error codes and the severity and sand
 | GET | `/api/alerts?asset_id=&event_class=&severity=` | alerts of the latest run (`shared/contracts.schema.json` shape); repeat `severity` for triage, e.g. `?severity=SEVERE&severity=MODERATE` |
 | GET | `/api/alerts/{asset_id}?severity=` | alerts for one pump (404 if none) |
 | GET | `/api/cockpit/{asset_id}` | diagnosis, evidence, SOP, sensor trends, mitigation sandbox |
+| GET | `/api/fault-guide` | what each of the 14 fault types means, urgency and steps (`src/data/fault_actions.json`) |
 | GET | `/api/scorecard` | retrofit business case (static) |
 | GET | `/api/model` | installed model, required datasheet columns, upload limit |
 | POST | `/api/analyses` | multipart upload → run the model → `201` run summary |
@@ -72,7 +73,7 @@ table (`asset_id, fault_type, onset_utc, end_utc`); when given, each alert gets 
 | `MONGODB_URI`, `MONGODB_DB` | empty, `since_ai` | Atlas connection; empty = in-memory runs |
 | `CORS_ORIGINS` | localhost + VM | comma-separated |
 | `MAX_UPLOAD_MB` | 200 | per uploaded file |
-| `ACTIVE_ALERT_HOURS` | 48 | an alert is "open" if raised this long before the pump's last reading |
+| `ACTIVE_ALERT_HOURS` | empty | empty = a pump's status uses every alert in the analysed period (matches "Detected issues"); a number = only alerts raised that many hours before its last reading |
 | `ENERGY_PRICE_EUR_KWH` | 0.15 | sandbox energy saving |
 | `COOLING_MIN_FLOW_FRACTION` | 0.8 | share of today's flow the cooled system needs (sandbox cooling margin) |
 | `SEED_RUN_PATH` | `seed/demo_run.json` | run loaded into an empty store |

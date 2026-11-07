@@ -35,6 +35,15 @@ def test_fleet_assets_and_cockpits_are_consistent(client):
             assert body["fault_type"] and a["open_alerts"] > 0
 
 
+def test_pump_status_agrees_with_its_alerts(client):
+    """A pump tile says 'ok' only when the pump has no alerts at all in the run (same data as Detected issues)."""
+    alerts = client.get("/api/alerts").json()
+    for a in client.get("/api/assets").json():
+        n = sum(1 for x in alerts if x["asset_id"] == a["asset_id"])
+        assert (a["severity"] == "ok") == (n == 0), (a["asset_id"], a["severity"], n)
+        assert a["open_alerts"] == n
+
+
 def test_alerts_follow_the_shared_contract(client):
     alerts = client.get("/api/alerts").json()
     assert alerts
@@ -69,6 +78,18 @@ def test_alerts_csv_uses_template_columns(client):
     assert r.status_code == 200 and r.headers["content-type"].startswith("text/csv")
     assert r.text.splitlines()[0] == "asset_id,alert_time_utc,event_class,fault_type,confidence,evidence,recommended_action"
     assert client.get("/api/analyses/unknown/alerts.csv").status_code == 404
+
+
+def test_fault_guide_covers_every_fault_type(client):
+    from src.models import FaultType
+
+    guide = {g["fault_type"]: g for g in client.get("/api/fault-guide").json()}
+    assert set(guide) == {f.value for f in FaultType}
+    for g in guide.values():
+        assert g["plain_name"] and g["what_to_do"], g["fault_type"]
+        assert g["urgency_level"] in {"act_now", "within_a_day", "next_planned_stop", "check_sensor"}
+    assert guide["CAVITATION"]["urgency_level"] == "act_now"
+    assert guide["SENSOR_STUCK"]["event_class"] == "SENSOR"
 
 
 def test_model_info(client):

@@ -4,6 +4,7 @@ import type {
   AnalysisRun,
   AssetStatus,
   CockpitResponse,
+  FaultGuideEntry,
   FleetSummary,
   HealthResponse,
   ModelInfo,
@@ -76,6 +77,10 @@ export function fetchCockpit(assetId: string, signal?: AbortSignal): Promise<Coc
 
 export function fetchScorecard(signal?: AbortSignal): Promise<ScorecardResponse> {
   return request<ScorecardResponse>("/api/scorecard", { signal });
+}
+
+export function fetchFaultGuide(signal?: AbortSignal): Promise<FaultGuideEntry[]> {
+  return request<FaultGuideEntry[]>("/api/fault-guide", { signal });
 }
 
 export function fetchModelInfo(signal?: AbortSignal): Promise<ModelInfo> {

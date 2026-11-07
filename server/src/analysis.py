@@ -159,10 +159,11 @@ def _label_alerts(alerts: list[StoredAlert], events: pd.DataFrame) -> None:
 
 # ------------------------------------------------------------------ per pump
 def _top_alert(active: list[StoredAlert]) -> StoredAlert | None:
-    """most severe open alert; the most recent one when tied"""
+    """most severe alert; a known diagnosis beats UNKNOWN; the most recent one when tied"""
     if not active:
         return None
-    return min(active, key=lambda a: (guide_for(a.fault_type.value).rank, -_ts(a.alert_time_utc).value))
+    return min(active, key=lambda a: (guide_for(a.fault_type.value).rank, a.fault_type.value == "UNKNOWN",
+                                      -_ts(a.alert_time_utc).value))
 
 
 def _evidence_rows(evidence: str | None) -> list[EvidenceRow]:
@@ -222,8 +223,12 @@ def _pump_views(pump: dict, minutes: pd.DataFrame, sheet: pd.Series, alerts: lis
                 settings: Settings) -> tuple[AssetStatus, CockpitResponse]:
     asset_id = pump["asset_id"]
     last_ts = minutes["window_start_utc"].max() + pd.Timedelta(minutes=1)
-    since = last_ts - pd.Timedelta(hours=settings.active_alert_hours)
-    active = [a for a in alerts if a.asset_id == asset_id and _ts(a.alert_time_utc) >= since]
+    pump_alerts = [a for a in alerts if a.asset_id == asset_id]
+    if settings.active_alert_hours:
+        since = last_ts - pd.Timedelta(hours=settings.active_alert_hours)
+        active = [a for a in pump_alerts if _ts(a.alert_time_utc) >= since]
+    else:  # whole analysed period, like the "Detected issues" card
+        active = pump_alerts
     top = _top_alert(active)
     guide = guide_for(top.fault_type.value) if top else None
     severity = guide.severity if guide else PumpSeverity.OK
@@ -249,7 +254,8 @@ def _pump_views(pump: dict, minutes: pd.DataFrame, sheet: pd.Series, alerts: lis
     sb = simulate(latest_state(minutes), sheet, top.fault_type.value if top else None,
                   top.confidence if top else None, is_machine,
                   settings.energy_price_eur_kwh, settings.cooling_min_flow_fraction)
-    hours = f"{settings.active_alert_hours:g}"
+    period = (f"in the last {settings.active_alert_hours:g} h of data" if settings.active_alert_hours
+              else "in the analysed period")
     cockpit = CockpitResponse(
         asset_id=asset_id,
         title=system,
@@ -257,7 +263,7 @@ def _pump_views(pump: dict, minutes: pd.DataFrame, sheet: pd.Series, alerts: lis
         event_class=top.event_class if top else EventClass.MACHINE,
         confidence=top.confidence if top else round(1 - HEALTHY_RISK, 2),
         severity=top.severity if top else None,
-        safe_window=guide.urgency_text if guide else f"No open alerts in the last {hours} h of data.",
+        safe_window=guide.urgency_text if guide else f"No alerts {period}.",
         evidence=_evidence_rows(top.evidence) if top else [],
         sop=list(guide.what_to_do) if guide else ["Continue normal watch.", "Re-run the analysis with new data."],
         trends=_trends(minutes, _trend_channels(top, available), sheet),

@@ -28,6 +28,9 @@ def test_top_alert_prefers_severity_then_recency():
     cav_new = _alert("CAVITATION", "2026-01-01T09:00:00Z")
     assert _top_alert([bearing, cav_old, cav_new]) is cav_new
     assert _top_alert([]) is None
+    restriction = _alert("DISCHARGE_RESTRICTION", "2026-01-01T10:00:00Z")
+    unknown_later = _alert("UNKNOWN", "2026-01-01T12:00:00Z", conf=0.3)   # same urgency level, but unclear
+    assert _top_alert([restriction, unknown_later]) is restriction
 
 
 def test_ground_truth_labelling():
