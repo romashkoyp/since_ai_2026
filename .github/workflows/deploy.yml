@@ -60,17 +60,20 @@ jobs:
           script: |
             set -euo pipefail
             cd ~/since_ai_deploy/client
+            # Host nginx owns :80/:443 and proxies to this container on :8080
+            # (same-origin /api → backend). Leave API base empty for relative /api calls.
             docker build \
-              --build-arg "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" \
+              --build-arg "VITE_API_BASE_URL=" \
               -t since-ai-client:latest .
             docker rm -f since-ai-client || true
             docker run -d \
               --name since-ai-client \
               --restart unless-stopped \
-              -p 80:80 \
+              -p 127.0.0.1:8080:80 \
               since-ai-client:latest
             docker image prune -f
-            curl -sf http://127.0.0.1/ >/dev/null || true
+            curl -sf http://127.0.0.1:8080/ >/dev/null
+            curl -sf -o /dev/null http://127.0.0.1/ || true
 
   deploy-backend:
     name: Deploy backend VM
