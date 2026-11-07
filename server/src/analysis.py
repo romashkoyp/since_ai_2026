@@ -42,7 +42,11 @@ _LOCK = threading.Lock()
 
 ISO = "%Y-%m-%dT%H:%M:%SZ"
 TREND_MAX_POINTS = 168  # one week of hourly points per series
-GROUND_TRUTH_GRACE = pd.Timedelta(hours=12)
+# Ground-truth matching = the team's labelling rule (joice_physics_rules/build_training_table.py true_label):
+# a fault is active from 30 min before onset to 2 h after end; when several are active, the latest onset wins.
+TRUTH_BEFORE_ONSET = pd.Timedelta(minutes=30)
+TRUTH_AFTER_END = pd.Timedelta(hours=2)
+OPEN_ENDED = pd.Timestamp("2200-01-01", tz="UTC")
 
 CHANNELS: dict[str, tuple[str, str]] = {
     "motor_speed_rpm": ("Motor speed", "rpm"),
@@ -143,11 +147,13 @@ def _label_alerts(alerts: list[StoredAlert], events: pd.DataFrame) -> None:
         "onset": pd.to_datetime(events["onset_utc"], utc=True, format="ISO8601"),
         "end": pd.to_datetime(events["end_utc"], utc=True, format="ISO8601") if "end_utc" in events else pd.NaT,
     })
-    ev["end"] = ev["end"].fillna(pd.Timestamp.max.tz_localize("UTC") - GROUND_TRUTH_GRACE)
+    ev["end"] = ev["end"].fillna(OPEN_ENDED)  # fault still going at the end of the data
     for a in alerts:
         t = _ts(a.alert_time_utc)
-        hit = ev[(ev.asset_id == a.asset_id) & (ev.onset <= t) & (t <= ev.end + GROUND_TRUTH_GRACE)]
-        a.true_fault_type = hit.sort_values("onset").iloc[-1].fault_type if len(hit) else "NO_FAULT"
+        active = ev[(ev.asset_id == a.asset_id) & (ev.onset - TRUTH_BEFORE_ONSET <= t)
+                    & (t <= ev.end + TRUTH_AFTER_END)]
+        # the fault happening at that moment = the most recent one to start
+        a.true_fault_type = active.sort_values("onset").iloc[-1].fault_type if len(active) else "NO_FAULT"
         a.correct = a.true_fault_type == a.fault_type.value
 
 

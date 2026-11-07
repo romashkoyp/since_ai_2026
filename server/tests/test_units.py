@@ -42,6 +42,26 @@ def test_ground_truth_labelling():
     assert (false_alarm.true_fault_type, false_alarm.correct) == ("NO_FAULT", False)
 
 
+def test_ground_truth_uses_the_team_labelling_rule():
+    """Same as joice_physics_rules/build_training_table.py true_label: -30 min .. +2 h, latest onset wins."""
+    events = pd.DataFrame([
+        {"asset_id": "P1", "fault_type": "BEARING_WEAR", "onset_utc": "2026-01-01T00:00:00Z", "end_utc": None},
+        {"asset_id": "P1", "fault_type": "COMMUNICATION_LOSS", "onset_utc": "2026-01-03T11:00:00Z",
+         "end_utc": "2026-01-03T13:00:00Z"},
+        {"asset_id": "P1", "fault_type": "CAVITATION", "onset_utc": "2026-01-05T10:00:00Z",
+         "end_utc": "2026-01-05T12:00:00Z"},
+    ])
+    during_outage = _alert("BEARING_WEAR", "2026-01-03T12:00:00Z")   # comm loss started later -> it wins
+    after_outage = _alert("BEARING_WEAR", "2026-01-03T15:30:00Z")    # >2 h after comm loss -> bearing again
+    early = _alert("CAVITATION", "2026-01-05T09:40:00Z")             # within 30 min before onset
+    late = _alert("CAVITATION", "2026-01-05T14:30:00Z")              # >2 h after end -> bearing (open-ended)
+    _label_alerts([during_outage, after_outage, early, late], events)
+    assert (during_outage.true_fault_type, during_outage.correct) == ("COMMUNICATION_LOSS", False)
+    assert (after_outage.true_fault_type, after_outage.correct) == ("BEARING_WEAR", True)
+    assert (early.true_fault_type, early.correct) == ("CAVITATION", True)
+    assert (late.true_fault_type, late.correct) == ("BEARING_WEAR", False)
+
+
 def test_extra_pumps_in_optional_files_are_dropped_with_a_note():
     notes: list[str] = []
     snaps = pd.DataFrame({"asset_id": ["P1", "P2", "P2"], "samples": [[0.0], [1.0], [2.0]]})
@@ -50,6 +70,30 @@ def test_extra_pumps_in_optional_files_are_dropped_with_a_note():
     assert notes == ["snapshots: rows for pumps not in the datasheet were ignored (P2)"]
     assert _only_known_pumps(snaps, {"P9"}, "snapshots", []) is None
     assert _only_known_pumps(None, {"P1"}, "context", []) is None
+
+
+def test_rebuilt_seed_replaces_old_seed_but_never_an_upload(tmp_path):
+    import json
+
+    from src.db import MemoryRunStore, ensure_seed
+    from src.models import AnalysisRecord, AnalysisRunSummary
+
+    def record(run_id: str, source: str, created: str) -> AnalysisRecord:
+        s = AnalysisRunSummary(run_id=run_id, created_utc=created, source=source, model_version="m", use_ml=True,
+                               pumps=0, alerts=0, ml_overrides=0, by_fault_type={}, processing_seconds=0)
+        return AnalysisRecord(summary=s, alerts=[], assets=[], cockpits=[])
+
+    seed = tmp_path / "seed.json"
+    seed.write_text(json.dumps(record("new-seed", "seed", "2026-01-02T00:00:00Z").model_dump(mode="json")))
+    store = MemoryRunStore()
+    store.save(record("old-seed", "seed", "2026-01-01T00:00:00Z"))
+    ensure_seed(store, seed)
+    assert store.latest().summary.run_id == "new-seed"
+    ensure_seed(store, seed)                                  # idempotent
+    assert len(store.list()) == 2
+    store.save(record("upload", "upload", "2026-01-03T00:00:00Z"))
+    ensure_seed(store, seed)
+    assert store.latest().summary.run_id == "upload"
 
 
 def test_sandbox_affinity_laws():

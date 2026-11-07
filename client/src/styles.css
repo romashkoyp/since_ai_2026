@@ -1223,127 +1223,6 @@ p {
   color: var(--muted);
 }
 
-.alert-triage {
-  display: grid;
-  gap: 0.85rem;
-  margin-bottom: 1rem;
-}
-
-.severity-toggles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.severity-toggle,
-.triage-severity {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 650;
-}
-
-.severity-toggle {
-  padding: 0.35rem 0.7rem;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.severity-toggle:hover,
-.severity-toggle:focus-visible {
-  border-color: var(--line-strong);
-  color: var(--ink);
-}
-
-.severity-toggle.active.alert-sev-severe {
-  border-color: var(--danger);
-  background: var(--danger-soft);
-  color: var(--danger);
-}
-
-.severity-toggle.active.alert-sev-moderate {
-  border-color: var(--warn);
-  background: var(--warn-soft);
-  color: var(--warn);
-}
-
-.severity-toggle.active.alert-sev-minimal,
-.severity-toggle.active.alert-sev-low_confidence {
-  border-color: var(--info);
-  background: var(--info-soft);
-  color: var(--info);
-}
-
-.triage-list {
-  display: grid;
-  gap: 0.55rem;
-  max-height: 24rem;
-  margin: 0;
-  padding: 0;
-  overflow-y: auto;
-  list-style: none;
-}
-
-.triage-list > li {
-  padding: 0.7rem 0.85rem;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--line-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
-}
-
-.triage-list > li.alert-sev-severe {
-  border-left-color: var(--danger);
-}
-
-.triage-list > li.alert-sev-moderate {
-  border-left-color: var(--warn);
-}
-
-.triage-list > li.alert-sev-minimal,
-.triage-list > li.alert-sev-low_confidence {
-  border-left-color: var(--info);
-}
-
-.triage-alert-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.triage-severity {
-  flex: none;
-  padding: 0.15rem 0.5rem;
-  color: var(--ink-2);
-}
-
-.triage-severity.alert-sev-severe {
-  color: var(--danger);
-}
-
-.triage-severity.alert-sev-moderate {
-  color: var(--warn);
-}
-
-.triage-severity.alert-sev-minimal,
-.triage-severity.alert-sev-low_confidence {
-  color: var(--info);
-}
-
-.triage-evidence {
-  margin-top: 0.35rem;
-  color: var(--ink-2);
-  font-size: 0.88rem;
-}
-
-.triage-meta {
-  margin-top: 0.3rem;
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
 .diagnose-panel {
   display: grid;
   gap: 0.85rem;
@@ -1370,16 +1249,12 @@ p {
   border-bottom: 0;
 }
 
-.issue-acc.verdict-pass {
+.issue-acc.health-detected {
+  border-left: 3px solid var(--warn);
+}
+
+.issue-acc.health-ok {
   border-left: 3px solid var(--ok);
-}
-
-.issue-acc.verdict-fail {
-  border-left: 3px solid var(--danger);
-}
-
-.issue-acc.verdict-unknown {
-  border-left: 3px solid var(--line);
 }
 
 .issue-acc-summary {
@@ -1421,6 +1296,34 @@ p {
   min-width: 0;
 }
 
+.health-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 4.4rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.health-badge.detected {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.health-badge.ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.issue-reason {
+  margin: 0 0 0.4rem;
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
 .issue-acc-conf {
   display: flex;
   align-items: center;
@@ -1432,6 +1335,58 @@ p {
 .issue-acc-conf strong {
   font-variant-numeric: tabular-nums;
   font-size: 0.9rem;
+}
+
+.issue-group {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.issue-group h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.issue-occ {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--ink-2);
+}
+
+.occ-list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0 0 0.5rem;
+  padding-left: 1.2rem;
+}
+
+.occ-list li {
+  font-size: 0.86rem;
+  color: var(--ink-2);
+}
+
+.occ-list li > * + * {
+  margin-left: 0.5rem;
+}
+
+.occ-time {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.occ-wrong {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.occ-evidence {
+  display: block;
+  margin: 0.15rem 0 0 !important;
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
 }
 
 .issue-acc-meter {
