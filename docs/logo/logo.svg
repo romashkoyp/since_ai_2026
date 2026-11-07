@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-180 -180 1180 360" width="1180" height="360" role="img" aria-label="ZeroFault logo">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="zf-bg" cx="30%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#14181E"/>
+      <stop offset="100%" stop-color="#0E1115"/>
+    </radialGradient>
+
+    <!-- Typography Styles -->
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@700;900&amp;family=Inter:wght@700;900&amp;display=swap');
+
+      .brand-title {
+        font-family: 'Red Hat Display', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        font-size: 106px;
+        font-weight: 900;
+        fill: #FFFFFF;
+      }
+
+      .brand-subtitle {
+        font-family: 'Red Hat Display', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        font-size: 30px;
+        font-weight: 700;
+        fill: #45A8C0;
+      }
+    </style>
+
+    <!-- Original Logo Definitions -->
+    <clipPath id="zf-left"><polygon points="-300,-300 192.9,-300 -192.9,300 -300,300"/></clipPath>
+    <clipPath id="zf-right"><polygon points="192.9,-300 300,-300 300,300 -192.9,300"/></clipPath>
+    <mask id="zf-gap" maskUnits="userSpaceOnUse" x="-200" y="-200" width="400" height="400">
+      <rect x="-200" y="-200" width="400" height="400" fill="#fff"/>
+      <polygon points="95.6,-200 161.6,-200 -95.6,200 -161.6,200" fill="#000"/>
+    </mask>
+    <g id="zf-shape">
+      <path fill-rule="evenodd" d="M0,-170 L147.2,-85 L147.2,85 L0,170 L-147.2,85 L-147.2,-85 Z M0,-126 L109.1,-63 L109.1,63 L0,126 L-109.1,63 L-109.1,-63 Z"/>
+      <circle r="80" fill="none" stroke-width="28"/>
+    </g>
+  </defs>
+
+  <!-- Dark Background -->
+  <rect x="-180" y="-180" width="1180" height="360" fill="url(#zf-bg)"/>
+
+  <!-- Logo Mark (Original Code) -->
+  <g mask="url(#zf-gap)">
+    <use href="#zf-shape" fill="#F5A23A" stroke="#F5A23A" clip-path="url(#zf-left)"/>
+    <use href="#zf-shape" fill="#3B9BD6" stroke="#3B9BD6" clip-path="url(#zf-right)"/>
+  </g>
+  <polygon points="91,-170 125,-170 -91,170 -125,170" fill="#F5A23A"/>
+
+  <!-- Equal Width Text Blocks -->
+  <text x="220" y="22" textLength="670" lengthAdjust="spacing" class="brand-title">ZEROFAULT</text>
+  <text x="220" y="74" textLength="670" lengthAdjust="spacing" class="brand-subtitle">PREDICTIVE ASSET INTELLIGENCE</text>
+</svg>
