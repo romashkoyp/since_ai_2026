@@ -92,12 +92,10 @@ export default function App() {
       <header className="topbar">
         <div className="topbar-inner">
           <button type="button" className="brand" onClick={() => setScreen("fleet")}>
-            <span className="brand-mark" aria-hidden>
-              <Icon name="shield" size={18} />
-            </span>
+            <img className="brand-mark" src="/logo/zerofault_mark.svg" alt="" width={36} height={36} />
             <span>
-              <strong>Since AI</strong>
-              <small>Pump Health Monitor</small>
+              <strong>ZeroFault</strong>
+              <small>Predictive Asset Intelligence</small>
             </span>
           </button>
 

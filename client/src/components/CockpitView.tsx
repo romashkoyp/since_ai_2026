@@ -7,6 +7,7 @@ import {
   explainFault,
   friendlyTime,
   healthScore,
+  isMachineIssue,
   modeLabel,
   plainStep,
   severityOf,
@@ -151,6 +152,9 @@ export function CockpitView({
   const riskProjPct = Math.round(proj.risk * 100);
   const coolingOk = data.cooling_margin_pct >= 100;
   const saving = -proj.energyDelta;
+  const machineIssues = assetAlerts.filter(
+    (a) => a.event_class === "MACHINE" && isMachineIssue(a.fault_type),
+  );
 
   return (
     <div className="pump-page">
@@ -251,26 +255,26 @@ export function CockpitView({
             <div className="card-title-row">
               <h2>Detected issues</h2>
               <span className="progress-pill">
-                {assetAlerts.length} alert{assetAlerts.length === 1 ? "" : "s"}
-                {assetAlerts.some((a) => a.correct != null) && (
+                {machineIssues.length} issue{machineIssues.length === 1 ? "" : "s"}
+                {machineIssues.some((a) => a.correct != null) && (
                   <>
                     {" · "}
-                    {assetAlerts.filter((a) => a.correct === true).length} pass
+                    {machineIssues.filter((a) => a.correct === true).length} pass
                     {" · "}
-                    {assetAlerts.filter((a) => a.correct === false).length} fail
+                    {machineIssues.filter((a) => a.correct === false).length} fail
                   </>
                 )}
               </span>
             </div>
             <p className="hint issue-legend">
-              Tap a row for evidence. <strong>Pass</strong> = matches ground truth · <strong>Fail</strong> = wrong
-              label.
+              All machine faults shown. Confidence % only on <strong>Fail</strong> rows.{" "}
+              <strong>Pass</strong> = matches ground truth · <strong>Fail</strong> = wrong label.
             </p>
-            {assetAlerts.length === 0 ? (
-              <p className="muted">No detector alerts for this pump in the current data set.</p>
+            {machineIssues.length === 0 ? (
+              <p className="muted">No machine-fault alerts for this pump.</p>
             ) : (
               <div className="issue-accordion">
-                {assetAlerts.map((a, i) => {
+                {machineIssues.map((a, i) => {
                   const confPct = Math.round(a.confidence * 100);
                   const verdict =
                     a.correct === true ? "pass" : a.correct === false ? "fail" : "unknown";
@@ -291,36 +295,33 @@ export function CockpitView({
                           </span>
                         )}
                         {verdict === "unknown" && <span className="verdict-badge unknown">Unchecked</span>}
-                        <span className="issue-acc-conf">
-                          <strong>{confPct}%</strong>
-                          <span className="issue-acc-meter" aria-hidden>
-                            <span
-                              className={verdict === "fail" ? "bg-danger" : verdict === "pass" ? "bg-ok" : ""}
-                              style={{ width: `${confPct}%` }}
-                            />
+                        {verdict === "fail" && (
+                          <span className="issue-acc-conf">
+                            <strong>{confPct}%</strong>
+                            <span className="issue-acc-meter" aria-hidden>
+                              <span className="bg-danger" style={{ width: `${confPct}%` }} />
+                            </span>
                           </span>
-                        </span>
+                        )}
                       </summary>
                       <div className="issue-acc-body">
                         <dl className="issue-acc-meta">
                           <div>
-                            <dt>Fault code</dt>
+                            <dt>Predicted</dt>
                             <dd>{a.fault_type.replaceAll("_", " ")}</dd>
-                          </div>
-                          <div>
-                            <dt>Class</dt>
-                            <dd>{a.event_class}</dd>
                           </div>
                           <div>
                             <dt>Noticed</dt>
                             <dd>{friendlyTime(a.alert_time_utc)}</dd>
                           </div>
-                          <div>
-                            <dt>Confidence</dt>
-                            <dd>
-                              {confidenceLabel(a.confidence)} · {confPct}%
-                            </dd>
-                          </div>
+                          {verdict === "fail" && (
+                            <div>
+                              <dt>Confidence</dt>
+                              <dd>
+                                {confidenceLabel(a.confidence)} · {confPct}%
+                              </dd>
+                            </div>
+                          )}
                           {a.true_fault_type && (
                             <div>
                               <dt>True fault</dt>

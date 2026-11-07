@@ -10,42 +10,42 @@ export interface FaultExplainer {
 
 const FAULTS: Record<FaultType, FaultExplainer> = {
   BEARING_WEAR: {
-    title: "Worn bearing",
+    title: "Bearing wear",
     whatItMeans: "A bearing that lets the shaft spin smoothly is wearing out. The pump is shaking and running hotter than normal.",
     whyItMatters: "If ignored, the bearing can seize and stop the pump suddenly.",
   },
   SUCTION_STRAINER_CLOGGING: {
-    title: "Blocked intake filter",
+    title: "Strainer clogging",
     whatItMeans: "The filter where water enters the pump is getting clogged, so less water reaches the pump.",
     whyItMatters: "The pump has to work harder and may start damaging itself.",
   },
   CAVITATION: {
-    title: "Air bubbles inside the pump",
+    title: "Cavitation",
     whatItMeans: "Water pressure at the inlet is too low, so small bubbles form and collapse inside the pump.",
     whyItMatters: "These bubbles slowly eat away the metal parts and reduce cooling.",
   },
   DISCHARGE_RESTRICTION: {
-    title: "Blocked outlet",
+    title: "Restriction",
     whatItMeans: "Something is restricting water leaving the pump, like a partly closed valve.",
     whyItMatters: "Less cooling water flows and the pump wastes energy.",
   },
   MISALIGNMENT: {
-    title: "Shaft out of line",
+    title: "Misalignment",
     whatItMeans: "The motor and pump are no longer perfectly lined up.",
     whyItMatters: "This wears out bearings and seals much faster.",
   },
   IMBALANCE: {
-    title: "Unbalanced rotating part",
+    title: "Imbalance",
     whatItMeans: "A spinning part is heavier on one side, causing the pump to shake.",
     whyItMatters: "Constant shaking damages bearings and mounts over time.",
   },
   IMPELLER_WEAR: {
-    title: "Worn impeller",
+    title: "Impeller wear",
     whatItMeans: "The spinning blades that push water are worn down.",
     whyItMatters: "The pump moves less water while using the same power.",
   },
   AIR_ENTRAINMENT: {
-    title: "Air getting into the water",
+    title: "Air entrainment",
     whatItMeans: "Air is being sucked in with the water.",
     whyItMatters: "Pumping air reduces cooling and can damage the pump.",
   },
@@ -80,6 +80,24 @@ const FAULTS: Record<FaultType, FaultExplainer> = {
     whyItMatters: "An engineer should take a look.",
   },
 };
+
+/** MACHINE fault types shown on Pump details (detector issues). */
+export const MACHINE_ISSUE_TYPES = [
+  "BEARING_WEAR",
+  "SUCTION_STRAINER_CLOGGING",
+  "CAVITATION",
+  "DISCHARGE_RESTRICTION",
+  "MISALIGNMENT",
+  "IMBALANCE",
+  "IMPELLER_WEAR",
+  "AIR_ENTRAINMENT",
+] as const satisfies readonly FaultType[];
+
+export type MachineIssueType = (typeof MACHINE_ISSUE_TYPES)[number];
+
+export function isMachineIssue(fault: string | null | undefined): fault is MachineIssueType {
+  return !!fault && (MACHINE_ISSUE_TYPES as readonly string[]).includes(fault);
+}
 
 export function explainFault(fault: FaultType | string | null | undefined): FaultExplainer {
   if (fault && fault in FAULTS) return FAULTS[fault as FaultType];
