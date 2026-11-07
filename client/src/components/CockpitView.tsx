@@ -43,7 +43,20 @@ function project(data: CockpitResponse, speed: number) {
     risk: lerp(data.risk_at_100, data.risk_at_88, t),
     npsh: lerp(data.npsh_at_100, data.npsh_at_88, t),
     energyDelta: data.energy_delta_eur_day * t,
+    rpm: data.rated_rpm != null ? Math.round(data.rated_rpm * (speed / 100)) : null,
   };
+}
+
+function diagnosisPlain(diagnosis: string): string {
+  const d = diagnosis.toLowerCase();
+  if (d.includes("strainer") && d.includes("cavitation")) {
+    return "Blocked intake filter and air bubbles inside the pump";
+  }
+  if (d.includes("bearing") || d.includes("bpfo")) return "Worn bearing";
+  if (d.includes("cavitation")) return "Air bubbles inside the pump";
+  if (d.includes("strainer") || d.includes("clog")) return "Blocked intake filter";
+  if (d.includes("no active")) return "Working normally";
+  return diagnosis;
 }
 
 export function CockpitView({
@@ -127,9 +140,9 @@ export function CockpitView({
   }
 
   const severity = asset ? severityOf(asset) : data.risk_at_100 > 0.5 ? "act_now" : "ok";
-  const isHealthy = severity === "ok";
+  const isHealthy = severity === "ok" && /no active/i.test(data.diagnosis);
   const fault = explainFault(alert?.fault_type);
-  const faultTitle = alert ? fault.title : isHealthy ? "Working normally" : data.diagnosis;
+  const plainTitle = isHealthy ? "Working normally" : diagnosisPlain(data.diagnosis);
   const confidencePct = Math.round(data.confidence * 100);
   const timeLeft = timeLeftLabel(asset?.rul_hours);
   const rulHours = asset?.rul_hours ?? null;
@@ -151,7 +164,7 @@ export function CockpitView({
       {usedFallback && (
         <div className="notice" role="status">
           <Icon name="help" size={18} />
-          <span>Live details for this pump are not available right now. Showing example details.</span>
+          <span>Live details for this pump are not available right now. Showing example details from the demo set.</span>
         </div>
       )}
 
@@ -160,16 +173,17 @@ export function CockpitView({
           <div className="pump-hero-top">
             <StatusBadge severity={severity} />
             <span className="muted">
-              {asset ? `${systemLabel(asset.system)} · ${asset.site}` : data.title}
+              {data.title}
+              {asset ? ` · ${systemLabel(asset.system)} · ${asset.site}` : ""}
             </span>
           </div>
           <h1>
-            {data.asset_id} <span className="muted-strong">— {faultTitle}</span>
+            {data.asset_id} <span className="muted-strong">— {plainTitle}</span>
           </h1>
           <p className="pump-hero-summary">
             {isHealthy
               ? "This pump is working normally. Nothing needs to be done."
-              : `${fault.whyItMatters}${timeLeft ? ` It is safe to keep running for ${timeLeft}.` : ""}`}
+              : `${fault.whyItMatters} ${data.safe_window}`}
           </p>
         </div>
         <dl className="pump-hero-facts">
@@ -194,6 +208,12 @@ export function CockpitView({
             <div>
               <dt>Safe to run for</dt>
               <dd className="strong">{timeLeft}</dd>
+            </div>
+          )}
+          {data.port_eta_hours != null && (
+            <div>
+              <dt>Port arrival</dt>
+              <dd className="strong">in about {data.port_eta_hours} hours</dd>
             </div>
           )}
           {alert && (
@@ -232,8 +252,9 @@ export function CockpitView({
         <div className="tab-body" role="tabpanel">
           <div className="grid-2">
             <section className="card">
-              <h2>What we found</h2>
-              <p className="lead">{isHealthy ? "No problems found. All readings look normal." : fault.whatItMeans}</p>
+              <h2>Primary diagnosis</h2>
+              <p className="lead">{isHealthy ? "No problems found. All readings look normal." : plainTitle}</p>
+              <p className="hint">{data.diagnosis}</p>
 
               <div className="confidence">
                 <div className="confidence-head">
@@ -247,9 +268,11 @@ export function CockpitView({
                 </div>
               </div>
 
+              <p className="safe">{data.safe_window}</p>
+
               {data.evidence.length > 0 && (
                 <>
-                  <h3>Warning signs we noticed</h3>
+                  <h3>Physical deviation evidence</h3>
                   <ul className="signs">
                     {data.evidence.map((row) => {
                       const dev = deviationLabel(row.sigma);
@@ -257,11 +280,15 @@ export function CockpitView({
                         <li key={row.channel} className={`sign lvl-${dev.level}`}>
                           <div>
                             <strong>{channelLabel(row.channel)}</strong>
-                            <span>{dev.text}</span>
+                            <span>
+                              {dev.text} ({row.sigma > 0 ? "+" : ""}
+                              {row.sigma.toFixed(1)}σ)
+                            </span>
                           </div>
                           <div className="sign-bar" aria-hidden>
                             <span style={{ width: `${Math.min((Math.abs(row.sigma) / 5) * 100, 100)}%` }} />
                           </div>
+                          <p className="sign-note">{row.note}</p>
                         </li>
                       );
                     })}
@@ -272,7 +299,7 @@ export function CockpitView({
 
             <section className="card">
               <div className="card-title-row">
-                <h2>What to do</h2>
+                <h2>SOP action protocol</h2>
                 {data.sop.length > 0 && (
                   <span className="progress-pill">
                     {doneCount} of {data.sop.length} done
@@ -294,14 +321,24 @@ export function CockpitView({
                   </li>
                 ))}
               </ol>
-              <p className="hint">Ticking steps here is just for your own tracking. It does not change the pump.</p>
+              {data.standby_asset_id && (
+                <p className="hint">
+                  Backup pump ready: <strong>{data.standby_asset_id}</strong>
+                </p>
+              )}
+              {data.sign_off && (
+                <p className="sign-off">
+                  <Icon name="check" size={14} /> Sign-off: {data.sign_off}
+                </p>
+              )}
+              <p className="hint">Ticking steps here is only for your tracking. This UI never writes to the pump controls.</p>
             </section>
           </div>
 
           {data.trends.length > 0 && (
             <section className="card">
-              <h2>How the readings changed</h2>
-              <p className="hint">The dashed line is the safe limit. The latest reading is the dot on the right.</p>
+              <h2>Sensor trends</h2>
+              <p className="hint">Discharge head, suction pressure, and motor power. The dashed line is the safe limit.</p>
               <div className="trend-grid">
                 {data.trends.map((series) => (
                   <Sparkline
@@ -313,6 +350,18 @@ export function CockpitView({
                   />
                 ))}
               </div>
+              {data.spectrum_note && (
+                <div className="spectrum-callout">
+                  <Icon name="warning" size={18} />
+                  <div>
+                    <strong>Vibration spectrum</strong>
+                    <p>
+                      Cavitation band highlighted at <strong>{data.spectrum_note}</strong> (matches housing acoustic
+                      resonance evidence).
+                    </p>
+                  </div>
+                </div>
+              )}
             </section>
           )}
 
@@ -361,7 +410,7 @@ export function CockpitView({
               <>
                 <p className="lead">
                   There is a <strong className="text-danger">{riskNowPct}% chance</strong> of damage if the pump keeps
-                  running at full speed.
+                  running at full speed (risk at 100% from the mitigation model).
                 </p>
                 <ol className="timeline">
                   <li className="tl-now">
@@ -369,17 +418,17 @@ export function CockpitView({
                     <strong>Now</strong>
                     <span>Problem detected. Pump still running.</span>
                   </li>
-                  {rulHours != null && (
+                  {data.port_eta_hours != null && (
                     <li className="tl-warn">
                       <span className="tl-dot" />
-                      <strong>In {timeLeftLabel(Math.max(rulHours / 2, 1))}</strong>
-                      <span>Wear gets worse. Less cooling, more noise and heat.</span>
+                      <strong>In about {data.port_eta_hours} hours</strong>
+                      <span>Ship reaches port — planned window for filter clean / repair.</span>
                     </li>
                   )}
                   <li className="tl-fail">
                     <span className="tl-dot" />
                     <strong>{rulHours != null ? `In ${timeLeftLabel(rulHours)}` : "Later"}</strong>
-                    <span>Pump may stop working and need emergency repair.</span>
+                    <span>Without derate, pump may leave the safe window and need emergency repair.</span>
                   </li>
                 </ol>
               </>
@@ -387,15 +436,23 @@ export function CockpitView({
           </section>
 
           <section className="card">
-            <h2>Try it: slow the pump down</h2>
+            <h2>Mitigation simulator</h2>
             <p className="hint">
-              Move the slider to see what would happen. This is only a simulation. It does not change the real pump.
+              What-if digital twin: adjust VFD speed. Sandbox only — no live PLC writes.
+              {data.rated_rpm != null && proj.rpm != null && (
+                <>
+                  {" "}
+                  At {speed}% ≈ <strong>{proj.rpm} RPM</strong> (rated {data.rated_rpm} RPM).
+                </>
+              )}
             </p>
 
             <div className="slider">
               <div className="slider-head">
-                <span>Pump speed</span>
-                <strong>{speed}%</strong>
+                <span>VFD speed derate</span>
+                <strong>
+                  {MAX_SPEED}% → {speed}%
+                </strong>
               </div>
               <input
                 type="range"
@@ -407,13 +464,21 @@ export function CockpitView({
               />
               <div className="slider-scale">
                 <span>Slower ({MIN_SPEED}%)</span>
-                <span>Full speed</span>
+                <span>Full speed ({MAX_SPEED}%)</span>
               </div>
             </div>
 
             <div className="outcomes">
               <div className="outcome">
-                <span className="outcome-label">Chance of damage</span>
+                <span className="outcome-label">NPSH margin</span>
+                <div className="outcome-compare">
+                  <span className="was">{data.npsh_at_100.toFixed(2)} m</span>
+                  <Icon name="back" size={14} className="flip" />
+                  <strong className="text-ok">{proj.npsh.toFixed(2)} m</strong>
+                </div>
+              </div>
+              <div className="outcome">
+                <span className="outcome-label">Risk</span>
                 <div className="outcome-compare">
                   <span className="was">{riskNowPct}%</span>
                   <Icon name="back" size={14} className="flip" />
@@ -429,20 +494,32 @@ export function CockpitView({
                 </div>
               </div>
               <div className="outcome">
-                <span className="outcome-label">Enough cooling?</span>
-                <strong className={coolingOk ? "text-ok" : "text-danger"}>
-                  {coolingOk ? "Yes" : "No"} <small>({data.cooling_margin_pct}% of what is needed)</small>
-                </strong>
-              </div>
-              <div className="outcome">
-                <span className="outcome-label">Energy cost</span>
+                <span className="outcome-label">Energy</span>
                 <strong className={saving >= 0 ? "text-ok" : "text-warn"}>
                   {Math.round(saving) === 0
                     ? "No change"
                     : saving > 0
-                      ? `Saves €${saving.toFixed(0)} per day`
-                      : `Costs €${Math.abs(saving).toFixed(0)} more per day`}
+                      ? `−€${saving.toFixed(2)}/day`
+                      : `+€${Math.abs(saving).toFixed(2)}/day`}
                 </strong>
+              </div>
+            </div>
+
+            <div className="cooling-bar">
+              <div className="cooling-bar-head">
+                <span>Main engine HT cooling margin</span>
+                <strong className={coolingOk ? "text-ok" : "text-danger"}>
+                  {data.cooling_margin_pct}%
+                  {data.cooling_safe_flow_m3h != null && (
+                    <small> (SAFE: {data.cooling_safe_flow_m3h} m³/h)</small>
+                  )}
+                </strong>
+              </div>
+              <div className="meter" aria-hidden>
+                <span
+                  className={coolingOk ? "bg-ok" : "bg-danger"}
+                  style={{ width: `${Math.min(data.cooling_margin_pct, 100)}%` }}
+                />
               </div>
             </div>
 
@@ -450,9 +527,10 @@ export function CockpitView({
               <div className="recommend">
                 <Icon name="check" size={18} />
                 <div>
-                  <strong>Our suggestion:</strong> run at about {bestSpeed}% speed until the repair. This lowers the chance of
-                  damage to about {Math.round(project(data, bestSpeed).risk * 100)}%
-                  {coolingOk ? " while still giving enough cooling." : "."}
+                  <strong>Suggested derate:</strong> {bestSpeed}% speed
+                  {data.standby_asset_id ? ` until duty transfers to ${data.standby_asset_id}` : ""}. Risk drops to about{" "}
+                  {Math.round(project(data, bestSpeed).risk * 100)}%
+                  {coolingOk ? " while cooling stays safe." : "."}
                   {speed !== bestSpeed && (
                     <button type="button" className="link-btn" onClick={() => setSpeed(bestSpeed)}>
                       Show me
@@ -466,8 +544,10 @@ export function CockpitView({
               <summary>Technical details for engineers</summary>
               <dl>
                 <div>
-                  <dt>NPSH margin at {speed}%</dt>
-                  <dd>{proj.npsh.toFixed(2)} m</dd>
+                  <dt>NPSH at 100% / 88%</dt>
+                  <dd>
+                    {data.npsh_at_100.toFixed(2)} m / {data.npsh_at_88.toFixed(2)} m
+                  </dd>
                 </div>
                 <div>
                   <dt>Risk at 100% / 88%</dt>
@@ -476,8 +556,15 @@ export function CockpitView({
                   </dd>
                 </div>
                 <div>
-                  <dt>Energy delta at {speed}%</dt>
-                  <dd>{proj.energyDelta.toFixed(1)} €/day</dd>
+                  <dt>Energy delta (full derate)</dt>
+                  <dd>{data.energy_delta_eur_day.toFixed(2)} €/day</dd>
+                </div>
+                <div>
+                  <dt>Cooling margin</dt>
+                  <dd>
+                    {data.cooling_margin_pct}%
+                    {data.cooling_safe_flow_m3h != null ? ` · safe flow ${data.cooling_safe_flow_m3h} m³/h` : ""}
+                  </dd>
                 </div>
               </dl>
             </details>

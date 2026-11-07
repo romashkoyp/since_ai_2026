@@ -230,6 +230,54 @@ p {
   cursor: progress;
 }
 
+.icon-btn.active {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.help-wrap {
+  position: relative;
+}
+
+.help-popover {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 20;
+  width: min(360px, calc(100vw - 2rem));
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.help-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.help-popover ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+
+.help-popover li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
 .page {
   flex: 1;
   width: 100%;
@@ -859,7 +907,7 @@ p {
 }
 
 .legend {
-  margin-top: 2rem;
+  margin: 1rem 0 0;
   padding: 1rem 1.25rem;
   border-radius: var(--radius);
   background: var(--surface);
@@ -1090,6 +1138,70 @@ p {
 .sign.lvl-high div:first-child span {
   color: var(--danger);
   font-weight: 600;
+}
+
+.sign-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.sign-off {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 1rem 0 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.spectrum-callout {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line));
+  background: var(--warn-soft);
+  color: var(--ink-2);
+  font-size: 0.92rem;
+}
+
+.spectrum-callout strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--warn);
+}
+
+.spectrum-callout p {
+  margin: 0;
+}
+
+.cooling-bar {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.cooling-bar-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.cooling-bar-head small {
+  font-weight: 500;
+  color: var(--muted);
 }
 
 .progress-pill {

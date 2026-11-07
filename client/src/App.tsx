@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchAlerts, fetchAssets, fetchFleetSummary, fetchHealth } from "./api/client";
 import { CockpitView } from "./components/CockpitView";
-import { FleetView } from "./components/FleetView";
+import { FleetView, StatusBadge } from "./components/FleetView";
 import { Icon } from "./components/Icon";
 import { LoadingBlock } from "./components/LoadingBlock";
 import { ScorecardView } from "./components/ScorecardView";
@@ -29,6 +29,7 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [helpOpen, setHelpOpen] = useState(false);
   const hasData = useRef(false);
 
   useEffect(() => {
@@ -133,6 +134,45 @@ export default function App() {
                 {source === "live" ? "Live data" : "Demo data"}
               </span>
             )}
+            <div className="help-wrap">
+              <button
+                type="button"
+                className={`icon-btn ${helpOpen ? "active" : ""}`}
+                onClick={() => setHelpOpen((v) => !v)}
+                aria-label="How to read this page"
+                title="How to read this page"
+                aria-expanded={helpOpen}
+              >
+                <Icon name="help" size={16} />
+              </button>
+              {helpOpen && (
+                <div className="help-popover" role="dialog" aria-label="How to read this page">
+                  <div className="help-popover-head">
+                    <strong>How to read this page</strong>
+                    <button type="button" className="link-btn" onClick={() => setHelpOpen(false)}>
+                      Close
+                    </button>
+                  </div>
+                  <ul>
+                    <li>
+                      <StatusBadge severity="act_now" /> The pump could break soon. Act today.
+                    </li>
+                    <li>
+                      <StatusBadge severity="attention" /> Something is wearing out. Plan a check in the next few days.
+                    </li>
+                    <li>
+                      <StatusBadge severity="sensor" /> The pump is fine, but a measuring sensor is giving wrong readings.
+                    </li>
+                    <li>
+                      <StatusBadge severity="ok" /> Everything is normal.
+                    </li>
+                    <li>
+                      <strong>Health</strong> is a simple 0–100% score. Higher is better.
+                    </li>
+                  </ul>
+                </div>
+              )}
+            </div>
             <button
               type="button"
               className="icon-btn"

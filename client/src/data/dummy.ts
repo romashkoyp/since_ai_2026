@@ -67,8 +67,8 @@ export const DUMMY_ALERTS: AlertPrediction[] = [
     event_class: "MACHINE",
     fault_type: "CAVITATION",
     confidence: 0.89,
-    evidence: "suction -3.8σ; 2.6–3.0 kHz cavitation band",
-    recommended_action: "Derate to 88% speed; clean strainer at port",
+    evidence: "Suction Ps -3.8σ; Housing Acoustic Resonance +4.3σ (2.6–3.0 kHz); Head vs Affinity -2.9σ",
+    recommended_action: "Derate to 88% immediately; transfer duty to Standby PUMP-07 at 04:00 UTC; backflush strainer",
   },
   {
     asset_id: "PUMP-11",
@@ -81,23 +81,23 @@ export const DUMMY_ALERTS: AlertPrediction[] = [
   },
 ];
 
+/** Screen 2 mock — docs/ui_images/screen2_unified_asset_cockpit.jpg */
 const COCKPIT_08: CockpitResponse = {
   asset_id: "PUMP-08",
   title: "LT Main Cooling Pump",
-  diagnosis: "Suction strainer clogging / early cavitation",
+  diagnosis: "Suction strainer clogging / cavitation",
   event_class: "MACHINE",
   confidence: 0.89,
-  safe_window: "~24h at 88% speed · port ETA 18h",
+  safe_window: "Safe window ~24h at 88% speed · Port arrival ETA: 18h",
   evidence: [
-    { channel: "Suction pressure", sigma: -3.8, note: "Below healthy envelope" },
-    { channel: "Acoustic resonance", sigma: 4.3, note: "2.6–3.0 kHz band" },
-    { channel: "Head vs affinity", sigma: -2.9, note: "Curve left of BEP" },
+    { channel: "Suction Ps", sigma: -3.8, note: "Below healthy envelope" },
+    { channel: "Housing Acoustic Resonance", sigma: 4.3, note: "2.6–3.0 kHz cavitation band" },
+    { channel: "Head vs Affinity", sigma: -2.9, note: "Operating left of BEP" },
   ],
   sop: [
-    "Derate VFD to 88% immediately",
-    "Confirm standby pump ready",
-    "Schedule strainer clean at next port",
-    "Do not write setpoints from this UI (read-only)",
+    "Derate to 88% immediately",
+    "Transfer duty to Standby PUMP-07 at 04:00 UTC",
+    "Backflush strainer",
   ],
   trends: [
     {
@@ -126,6 +126,12 @@ const COCKPIT_08: CockpitResponse = {
   risk_at_88: 0.14,
   energy_delta_eur_day: -34.2,
   cooling_margin_pct: 106,
+  sign_off: "Ch. Eng. Virtanen · CMMS #5892 · Verified",
+  port_eta_hours: 18,
+  standby_asset_id: "PUMP-07",
+  cooling_safe_flow_m3h: 312,
+  spectrum_note: "2.6–3.0 kHz cavitation resonance",
+  rated_rpm: 1800,
 };
 
 const COCKPIT_04: CockpitResponse = {

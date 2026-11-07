@@ -258,29 +258,6 @@ export function FleetView({
           </div>
         )}
       </section>
-
-      <details className="legend">
-        <summary>
-          <Icon name="help" size={16} /> How to read this page
-        </summary>
-        <ul>
-          <li>
-            <StatusBadge severity="act_now" /> The pump could break soon. Act today.
-          </li>
-          <li>
-            <StatusBadge severity="attention" /> Something is wearing out. Plan a check in the next few days.
-          </li>
-          <li>
-            <StatusBadge severity="sensor" /> The pump is fine, but a measuring sensor is giving wrong readings.
-          </li>
-          <li>
-            <StatusBadge severity="ok" /> Everything is normal.
-          </li>
-          <li>
-            <strong>Health</strong> is a simple 0–100% score. Higher is better.
-          </li>
-        </ul>
-      </details>
     </div>
   );
 }
