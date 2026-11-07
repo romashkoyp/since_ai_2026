@@ -1,0 +1,8 @@
+asset_id,split,site,system,profile,control,instrumentation_tier,pump_rated_flow_m3_h,pump_rated_head_m,motor_rated_kw,motor_rated_rpm,fluid,window_start_utc,window_end_utc
+PUMP-01,train,"Vessel A (RoPax, fictional)","Seawater cooling, pump No. 1",SHIP_SW_COOLING,VFD_TEMPERATURE,T1_RETROFIT,520,26,55,1780,"Seawater (brackish, ~6 PSU)",2025-08-11T00:00:00Z,2025-08-18T00:00:00Z
+PUMP-02,train,"Vessel A (RoPax, fictional)","Seawater cooling, pump No. 2",SHIP_SW_COOLING,VFD_TEMPERATURE,T2_FULL,520,26,55,1780,"Seawater (brackish, ~6 PSU)",2025-12-01T00:00:00Z,2025-12-08T00:00:00Z
+PUMP-03,train,"Vessel A (RoPax, fictional)","LT fresh-water central cooling, pump No. 1",SHIP_LT_FRESHWATER,FIXED_SPEED,T0_LEGACY,400,32,55,1775,Treated fresh water (closed loop),2026-03-02T00:00:00Z,2026-03-09T00:00:00Z
+PUMP-04,train,"Plant C (food processing, fictional)",Cooling-tower circulation pump CW-1,INDUSTRIAL_CW,VFD_PRESSURE,T2_FULL,320,33,45,1480,Cooling-tower water,2025-06-16T00:00:00Z,2025-06-23T00:00:00Z
+PUMP-05,train,"Plant C (food processing, fictional)",Process cooling-water pump CW-3 (fixed speed),INDUSTRIAL_CW,FIXED_SPEED,T0_LEGACY,180,36,30,2955,Cooling-tower water,2026-01-19T00:00:00Z,2026-01-26T00:00:00Z
+PUMP-06,train,"Plant D (chemical process, fictional)",Hot process-water transfer pump PT-2,PROCESS_TRANSFER,FLOW_VALVE,T1_RETROFIT,65,42,15,2930,Hot process water,2025-10-06T00:00:00Z,2025-10-13T00:00:00Z
+PUMP-07,train,"Vessel B (RoPax, fictional)","Seawater cooling, pump No. 1",SHIP_SW_COOLING,VFD_TEMPERATURE,T2_FULL,650,24,75,1785,"Seawater (brackish, ~6 PSU)",2025-05-12T00:00:00Z,2025-05-19T00:00:00Z

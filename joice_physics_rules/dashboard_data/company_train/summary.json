@@ -1,0 +1,21 @@
+{
+  "source": "company train",
+  "pumps": 7,
+  "faults": 27,
+  "alerts": 49,
+  "faults_detected": 24,
+  "fault_type_correct": 21,
+  "score_physics": 86.7,
+  "score_baseline_B1": 58.2,
+  "false_alerts_per_pump_day": 0.041,
+  "physics_columns": {
+    "head_factor": "head_factor (1.0 = on pump curve)",
+    "head_change_vs_normal": "head_change_vs_normal",
+    "power_change_vs_normal": "power_change_vs_normal",
+    "npsh_margin": "npsh_margin (<1.15 = cavitation)",
+    "bearing_index": "bearing_index (~0.1 healthy, >0.6 damaged)",
+    "current_vs_power_error": "current_vs_power_error",
+    "bearing_temp_above_normal_C": "bearing_temp_above_normal_C",
+    "minutes_since_start": "minutes_since_start"
+  }
+}

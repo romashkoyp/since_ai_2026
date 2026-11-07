@@ -3,12 +3,16 @@ import numpy as np, pandas as pd
 from retrofit_sim import baselines as B
 CH = B.CH; COUPLED = B.COUPLED
 THERMAL = {"bt", "wt", "tf"}
+def _ns(s):
+    """same time resolution everywhere (newer pandas refuses to merge ms with us timestamps)"""
+    return pd.to_datetime(s, utc=True).astype("datetime64[ns, UTC]")
 
 def prep(zf, ctx, snapf, assets=None):
     """per-asset helper columns: minutes since start, length of preceding stop, context, vibration ratios"""
     out = []
     for a, g in zf.groupby("asset_id", sort=False):
         g = g.sort_values("window_start_utc").reset_index(drop=True)
+        g["window_start_utc"] = _ns(g["window_start_utc"])
         run = ((g.operating_mode == "RUNNING") & (g.running_fraction >= 0.99)).values
         since = np.zeros(len(g)); stop_len = np.zeros(len(g)); s = 0; off = 0; last_stop = 0
         for j, x in enumerate(run):
@@ -19,9 +23,10 @@ def prep(zf, ctx, snapf, assets=None):
                 off += 1; s = 0
             since[j] = s; stop_len[j] = last_stop
         g["since_start"] = since; g["prev_stop_min"] = stop_len
-        c = ctx[ctx.asset_id == a].sort_values("t")
+        c = ctx[ctx.asset_id == a].sort_values("t").copy(); c["t"] = _ns(c["t"])
         g = pd.merge_asof(g, c[["t", "sea_state_hs_m", "suction_static_head_m"]], left_on="window_start_utc", right_on="t", direction="backward").drop(columns="t")
-        sf = snapf[snapf.asset_id == a].sort_values("time")
+        sf = snapf[snapf.asset_id == a].sort_values("time").copy()
+        if len(sf): sf["time"] = _ns(sf["time"])
         if len(sf):
             g = pd.merge_asof(g, sf[["time", "r_bpfo", "r_1x", "r_2x", "r_hf", "b_idx", "r_bidx"]], left_on="window_start_utc", right_on="time", direction="backward").drop(columns="time")
         else:
@@ -144,6 +149,12 @@ def diagnose2(g, j, k, ctl):
     for c in z:
         if flag("flat_" + c) and flag("steady") and c in ("pd", "ps", "q", "bt", "i", "tf", "wt"):
             return "SENSOR", "SENSOR_STUCK", 0.9, f"{CH[c]} frozen while pump running", f"Check transmitter {CH[c]}."
+    # --- noise spikes: ONE channel's in-minute spread explodes (average unchanged), all others calm
+    zsv = {c: float(r["zs_" + c]) for c in CH if "zs_" + c in r.index and not pd.isna(r["zs_" + c])}
+    if zsv:
+        top = max(zsv, key=zsv.get)
+        if zsv[top] > 15 and all(v < 5 for c, v in zsv.items() if c != top):
+            return "SENSOR", "SENSOR_NOISE_SPIKES", 0.8, f"{CH[top]} in-minute spread z={zsv[top]:.0f}, all other channels calm (<5)", f"Check cabling / grounding of {CH[top]}."
     # --- single-instrument deviations -> sensor faults
     for c in sorted(z, key=lambda c: -abs(z[c])):
         if abs(z[c]) <= k or c not in COUPLED or c in ("v", "a", "c"): continue

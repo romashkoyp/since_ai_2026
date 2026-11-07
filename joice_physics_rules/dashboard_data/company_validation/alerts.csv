@@ -1,0 +1,15 @@
+asset_id,alert_time_utc,event_class,fault_type,confidence,evidence,recommended_action,true_fault_type,correct
+PUMP-08,2025-09-10T12:38:00Z,MACHINE,SUCTION_STRAINER_CLOGGING,0.75,suction_pressure_kpa z=-6.7; head +2% power -2% vs reference,Inspect / clean suction strainer.,SUCTION_STRAINER_CLOGGING,True
+PUMP-08,2025-09-11T01:29:00Z,MACHINE,SUCTION_STRAINER_CLOGGING,0.75,suction_pressure_kpa z=-9.2; head +3% power -3% vs reference,Inspect / clean suction strainer.,SUCTION_STRAINER_CLOGGING,True
+PUMP-08,2025-09-11T17:09:00Z,MACHINE,BEARING_WEAR,0.8,"bearing-defect index 0.40 (healthy ~0.1, x3.6 vs start)",Plan bearing replacement; check lubrication.,BEARING_WEAR,True
+PUMP-08,2025-09-13T00:07:00Z,SENSOR,COMMUNICATION_LOSS,0.95,missing rows,Check gateway / network; data gap.,COMMUNICATION_LOSS,True
+PUMP-08,2025-09-13T13:07:00Z,MACHINE,BEARING_WEAR,0.85,"fluid_temp_c z=-6.3; bearing-defect index 1.99 (healthy ~0.1), crest z=+0.0",Plan bearing replacement; check lubrication.,BEARING_WEAR,True
+PUMP-08,2025-09-13T20:20:00Z,SENSOR,SENSOR_NOISE_SPIKES,0.75,"discharge_pressure_kpa: in-minute range x3.1 of normal in 5 of last 15 min, other channels normal",Check cabling / grounding of discharge_pressure_kpa.,SENSOR_NOISE_SPIKES,True
+PUMP-09,2026-02-10T06:28:00Z,MACHINE,MISALIGNMENT,0.7,vibration_rms_mm_s z=+16.3; 2x vibration x5.2; restart after 179 min stop,Check coupling alignment (likely after maintenance).,MISALIGNMENT,True
+PUMP-09,2026-02-10T10:39:00Z,SENSOR,SENSOR_CALIBRATION_SHIFT,0.7,"motor current +4.6% off the current-power line (healthy < 2.5%), sudden",Verify current transducer against a clamp meter.,MISALIGNMENT,False
+PUMP-09,2026-02-11T06:28:00Z,MACHINE,MISALIGNMENT,0.7,vibration_rms_mm_s z=+18.5; 2x vibration x6.0; restart after 179 min stop,Check coupling alignment (likely after maintenance).,MISALIGNMENT,True
+PUMP-09,2026-02-12T00:20:00Z,SENSOR,SENSOR_STUCK,0.9,bearing_temp_c frozen while pump running,Check transmitter bearing_temp_c.,SENSOR_STUCK,True
+PUMP-09,2026-02-13T00:20:00Z,MACHINE,MISALIGNMENT,0.7,vibration_rms_mm_s z=+27.2; 2x vibration x6.6; restart after 82 min stop,Check coupling alignment (likely after maintenance).,MISALIGNMENT,True
+PUMP-09,2026-02-14T01:16:00Z,MACHINE,DISCHARGE_RESTRICTION,0.75,"flow_m3_h z=-11.5, motor_power_kw z=-7.5; head factor 0.99 (+0% vs own normal); head +1% power -2% vs reference",Check discharge valves and heat-exchanger fouling.,DISCHARGE_RESTRICTION,True
+PUMP-09,2026-02-15T01:16:00Z,MACHINE,DISCHARGE_RESTRICTION,0.75,"flow_m3_h z=-23.3, motor_power_kw z=-13.9, discharge_pressure_kpa z=+8.9; head factor 0.99 (-0% vs own normal); head +5% power -8% vs reference",Check discharge valves and heat-exchanger fouling.,DISCHARGE_RESTRICTION,True
+PUMP-09,2026-02-15T08:50:00Z,MACHINE,AIR_ENTRAINMENT,0.6,"flow_m3_h z=-27.8, motor_power_kw z=-26.6, suction_pressure_kpa z=-9.8; head factor 0.93 (-6% vs own normal); head -0% power -14% vs reference; sea state 0.0 m",Check sea-chest venting / basin level; air in suction.,AIR_ENTRAINMENT,True
