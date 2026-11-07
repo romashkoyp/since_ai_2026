@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
+from . import db
 from .models import (
     AlertPrediction,
     AssetStatus,
@@ -19,16 +22,29 @@ from .models import (
 )
 from .sample_data import (
     COCKPITS,
-    SAMPLE_ALERTS,
-    SAMPLE_ASSETS,
     SCORECARD,
     fleet_summary,
 )
 
+
+# Kaleb Routes
+# from retrofit_engine.router import router as retrofit_router
+# app.include_router(retrofit_router)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    # Logs "MongoDB: connected …" or "MongoDB: not connected …" via uvicorn.error
+    db.connect()
+    yield
+    db.close()
+
+
 app = FastAPI(
     title="Since AI 2026 API",
-    version="0.2.0",
+    version="0.3.0",
     description="Operator cockpit API — alerts, fleet, asset diagnostics, retrofit scorecard",
+    lifespan=lifespan,
 )
 
 cors_origins = [
@@ -51,7 +67,7 @@ app.add_middleware(
 
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    return HealthResponse(status="ok", service="since-ai-server")
+    return HealthResponse(status="ok", service="since-ai-server", database=db.status())
 
 
 @app.get("/api/alerts", response_model=list[AlertPrediction])
@@ -63,11 +79,7 @@ def list_alerts(
         description="Repeat to include triage bands, e.g. ?severity=SEVERE&severity=MODERATE",
     ),
 ) -> list[AlertPrediction]:
-    alerts = SAMPLE_ALERTS
-    if asset_id:
-        alerts = [a for a in alerts if a.asset_id == asset_id]
-    if event_class:
-        alerts = [a for a in alerts if a.event_class.value == event_class.upper()]
+    alerts = db.get_alerts(asset_id=asset_id, event_class=event_class)
     if severity:
         alerts = [a for a in alerts if a.severity in severity]
     return alerts
@@ -81,7 +93,7 @@ def alerts_for_asset(
         description="Repeat to include triage bands, e.g. ?severity=SEVERE&severity=MODERATE",
     ),
 ) -> list[AlertPrediction]:
-    alerts = [a for a in SAMPLE_ALERTS if a.asset_id == asset_id]
+    alerts = db.get_alerts(asset_id=asset_id)
     if severity:
         alerts = [a for a in alerts if a.severity in severity]
     if not alerts:
@@ -91,12 +103,12 @@ def alerts_for_asset(
 
 @app.get("/api/assets", response_model=list[AssetStatus])
 def list_assets() -> list[AssetStatus]:
-    return SAMPLE_ASSETS
+    return db.get_assets()
 
 
 @app.get("/api/fleet/summary", response_model=FleetSummary)
 def get_fleet_summary() -> FleetSummary:
-    return fleet_summary()
+    return fleet_summary(db.get_assets())
 
 
 @app.get("/api/cockpit/{asset_id}", response_model=CockpitResponse)
@@ -104,11 +116,11 @@ def get_cockpit(asset_id: str) -> CockpitResponse:
     if asset_id in COCKPITS:
         return COCKPITS[asset_id]
 
-    asset = next((a for a in SAMPLE_ASSETS if a.asset_id == asset_id), None)
+    asset = next((a for a in db.get_assets() if a.asset_id == asset_id), None)
     if not asset:
         raise HTTPException(status_code=404, detail=f"Unknown asset {asset_id}")
 
-    alerts = [a for a in SAMPLE_ALERTS if a.asset_id == asset_id]
+    alerts = db.get_alerts(asset_id=asset_id)
     if alerts:
         top = alerts[0]
         return CockpitResponse(

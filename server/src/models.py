@@ -40,6 +40,8 @@ class AlertPrediction(BaseModel):
     confidence: float = Field(ge=0, le=1)
     evidence: Optional[str] = None
     recommended_action: Optional[str] = None
+    true_fault_type: Optional[str] = None
+    correct: Optional[bool] = None
 
     @computed_field
     @property
@@ -126,3 +128,4 @@ class ScorecardResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     service: str
+    database: Optional[str] = None
