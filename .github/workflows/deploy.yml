@@ -1,0 +1,105 @@
+name: Deploy OCI
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "What to deploy"
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - frontend
+          - backend
+
+concurrency:
+  group: oci-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy-frontend:
+    name: Deploy frontend VM
+    runs-on: ubuntu-latest
+    if: >
+      (
+        github.event_name == 'workflow_dispatch' &&
+        (inputs.target == 'both' || inputs.target == 'frontend')
+      ) || (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success'
+      )
+    steps:
+      - name: Deploy client over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.OCI_FE_HOST }}
+          username: ${{ secrets.OCI_SSH_USER }}
+          key: ${{ secrets.OCI_FE_SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            REPO_DIR="${HOME}/since_ai_2026"
+            if [ ! -d "$REPO_DIR/.git" ]; then
+              git clone https://github.com/romashkoyp/since_ai_2026.git "$REPO_DIR"
+            fi
+            cd "$REPO_DIR"
+            git fetch origin
+            git checkout main
+            git pull --ff-only origin main
+            cd client
+            docker build \
+              --build-arg "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" \
+              -t since-ai-client:latest .
+            docker rm -f since-ai-client || true
+            docker run -d \
+              --name since-ai-client \
+              --restart unless-stopped \
+              -p 80:80 \
+              since-ai-client:latest
+            docker image prune -f
+
+  deploy-backend:
+    name: Deploy backend VM
+    runs-on: ubuntu-latest
+    if: >
+      (
+        github.event_name == 'workflow_dispatch' &&
+        (inputs.target == 'both' || inputs.target == 'backend')
+      ) || (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success'
+      )
+    steps:
+      - name: Deploy server over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.OCI_BE_HOST }}
+          username: ${{ secrets.OCI_SSH_USER }}
+          key: ${{ secrets.OCI_BE_SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            REPO_DIR="${HOME}/since_ai_2026"
+            if [ ! -d "$REPO_DIR/.git" ]; then
+              git clone https://github.com/romashkoyp/since_ai_2026.git "$REPO_DIR"
+            fi
+            cd "$REPO_DIR"
+            git fetch origin
+            git checkout main
+            git pull --ff-only origin main
+            cd server
+            docker build -t since-ai-server:latest .
+            docker rm -f since-ai-server || true
+            docker run -d \
+              --name since-ai-server \
+              --restart unless-stopped \
+              -p 8000:8000 \
+              -e "CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}" \
+              -e "MONGODB_URI=${{ secrets.MONGODB_URI }}" \
+              since-ai-server:latest
+            docker image prune -f

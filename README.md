@@ -32,6 +32,33 @@ Repository: <https://github.com/romashkoyp/since_ai_2026>
 - NEVER commit `.env` files or secrets to Git.
 - content of `.env` file will be shared in Telegram chat (for instance)
 
+### 1.4 Run the sample client + server
+
+**Local (dev):**
+
+```bash
+# Terminal A — Python API (Python 3.12+)
+cd server
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn src.main:app --reload --port 8000
+
+# Terminal B — React UI
+cd client
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` (Vite proxies `/api` and `/health` to port 8000).
+
+**Docker (CI-friendly host):**
+
+```bash
+docker compose up --build
+```
+
+UI: `http://localhost:3000` · API: `http://localhost:8000` · CI: `.github/workflows/ci.yml` · OCI deploy: `.github/workflows/deploy.yml` (see `docs/CICD_OCI_SETUP.md`)
+
 ---
 
 ## 2. Team Architecture & Ownership

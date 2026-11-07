@@ -1,27 +1,37 @@
 # server/
 
-Backend API services and controllers (**Backend / API Lead**).
+Backend API services (**Backend / API Lead**) — Python FastAPI.
 
 ## Owns
 
-- Thin API routes that serve alerts, assets, and integration endpoints for the cockpit
-- Controllers and service wiring over prediction / asset data
+- API routes that serve alerts and assets for the cockpit
+- Sample data wiring until `retrofit/` predictions are plugged in
 
-## Layout
+## Run locally
 
-```text
-server/
-└── src/          # routes, controllers, and services go here
+Requires Python 3.12+ (3.12 recommended).
+
+```bash
+cd server
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn src.main:app --reload --port 8000
 ```
 
-## Do
+- Health: `GET http://localhost:8000/health`
+- Alerts: `GET http://localhost:8000/api/alerts`
+- Assets: `GET http://localhost:8000/api/assets`
+- Docs: `http://localhost:8000/docs`
 
-- Put new API code under `server/src/`
-- Import alert shapes from `shared/contracts.schema.json`
-- Edit only files under `server/`
+## Docker
 
-## Don't
+```bash
+docker build -t since-ai-server .
+docker run --rm -p 8000:8000 since-ai-server
+```
 
-- Alter `shared/` (read-only for this role)
-- Move SENTRY / LUMI / sim into this folder — that stays in `retrofit/`
-- Edit `client/`, `db/`, or `docs/` unless explicitly assigned
+## Do / Don't
+
+- Edit only under `server/`
+- Keep alert shapes aligned with `shared/contracts.schema.json`
+- Do not move SENTRY / LUMI code here — that stays in `retrofit/`

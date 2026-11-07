@@ -1,27 +1,31 @@
 # client/
 
-Frontend application and components (**Client / UI Lead**).
+Frontend (**Client / UI Lead**) — React + TypeScript (Vite).
 
 ## Owns
 
-- Streamlit operator cockpit (fleet triage, explainable alert cards, sandbox, replay UI)
-- Page layouts, UI state, user flows, and mock integration
+- Operator cockpit UI (fleet strip + alert list)
+- Fetching `/api/alerts` and `/api/assets` from the Python API
 
-## Layout
+## Run locally
 
-```text
-client/
-└── src/          # UI entrypoints and components go here
+```bash
+cd client
+npm install
+npm run dev
 ```
 
-## Do
+Open `http://localhost:5173`. Vite proxies `/api` and `/health` to `http://localhost:8000`
+(start the server first).
 
-- Put new UI under `client/src/`
-- Consume alert shapes from `shared/contracts.schema.json`
-- Edit only files under `client/`
+Optional: set `VITE_API_BASE_URL` in a local `.env` to call the API without the proxy.
 
-## Don't
+## Docker
 
-- Alter `shared/` (read-only for this role)
-- Put detector / ML / sim code here — that stays in `retrofit/`
-- Edit `server/`, `db/`, or `docs/` unless explicitly assigned
+Built via root `docker-compose.yml` (nginx serves the SPA and proxies API to `server`).
+
+## Do / Don't
+
+- Put UI under `client/src/`
+- Keep types in sync with `shared/contracts.schema.json`
+- Do not alter `shared/` or `retrofit/` from this domain
