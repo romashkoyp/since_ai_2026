@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchCockpit } from "../api/client";
-import { AlertTriage } from "./AlertTriage";
 import { getDummyCockpit } from "../data/dummy";
+import { machineIssueRows } from "../lib/issues";
 import {
   channelLabel,
   confidenceLabel,
   explainFault,
   friendlyTime,
   healthScore,
-  isMachineIssue,
   modeLabel,
   plainStep,
   severityOf,
@@ -153,9 +152,10 @@ export function CockpitView({
   const riskProjPct = Math.round(proj.risk * 100);
   const coolingOk = data.cooling_margin_pct >= 100;
   const saving = -proj.energyDelta;
-  const machineIssues = assetAlerts.filter(
-    (a) => a.event_class === "MACHINE" && isMachineIssue(a.fault_type),
-  );
+  const issueRows = machineIssueRows(assetAlerts);
+  const passCount = issueRows.filter((r) => r.verdict === "pass").length;
+  const failCount = issueRows.filter((r) => r.verdict === "fail").length;
+  const checked = issueRows.some((r) => r.verdict !== "unchecked");
 
   return (
     <div className="pump-page">
@@ -252,101 +252,98 @@ export function CockpitView({
 
       {mode === "diagnose" ? (
         <div className="tab-body" role="tabpanel">
-          <AlertTriage alerts={assetAlerts} />
           <section className="card diagnose-panel">
             <div className="card-title-row">
               <h2>Detected issues</h2>
               <span className="progress-pill">
-                {machineIssues.length} issue{machineIssues.length === 1 ? "" : "s"}
-                {machineIssues.some((a) => a.correct != null) && (
+                {issueRows.length} issue types
+                {checked && (
                   <>
                     {" · "}
-                    {machineIssues.filter((a) => a.correct === true).length} pass
-                    {" · "}
-                    {machineIssues.filter((a) => a.correct === false).length} fail
+                    {passCount} pass · {failCount} fail
                   </>
                 )}
               </span>
             </div>
             <p className="hint issue-legend">
-              All machine faults shown. Confidence % only on <strong>Fail</strong> rows.{" "}
-              <strong>Pass</strong> = matches ground truth · <strong>Fail</strong> = wrong label.
+              Every machine issue type is checked once for this pump.{" "}
+              {checked ? (
+                <>
+                  <strong>Pass</strong> = matches the real faults · <strong>Fail</strong> = wrong or missed, with the
+                  confidence of the wrong call.
+                </>
+              ) : (
+                "No known faults were supplied for this data, so the results are not checked."
+              )}
             </p>
-            {machineIssues.length === 0 ? (
-              <p className="muted">No machine-fault alerts for this pump.</p>
-            ) : (
-              <div className="issue-accordion">
-                {machineIssues.map((a, i) => {
-                  const confPct = Math.round(a.confidence * 100);
-                  const verdict =
-                    a.correct === true ? "pass" : a.correct === false ? "fail" : "unknown";
-                  const key = `${a.asset_id}-${a.alert_time_utc}-${a.fault_type}-${i}`;
-                  return (
-                    <details key={key} className={`issue-acc verdict-${verdict}`}>
-                      <summary className="issue-acc-summary">
-                        <span className="issue-acc-chevron" aria-hidden />
-                        <span className="issue-acc-title">{explainFault(a.fault_type).title}</span>
-                        {verdict === "pass" && (
-                          <span className="verdict-badge pass">
-                            <Icon name="check" size={14} /> Pass
+            <div className="issue-accordion">
+              {issueRows.map((row) => {
+                const confPct = row.failConfidence != null ? Math.round(row.failConfidence * 100) : null;
+                const latest = row.alerts.at(-1);
+                return (
+                  <details key={row.type} className={`issue-acc verdict-${row.verdict}`}>
+                    <summary className="issue-acc-summary">
+                      <span className="issue-acc-chevron" aria-hidden />
+                      <span className="issue-acc-title">
+                        {explainFault(row.type).title}
+                        <small className="issue-acc-state">{row.detected ? "Flagged" : "Not flagged"}</small>
+                      </span>
+                      {row.verdict === "pass" && (
+                        <span className="verdict-badge pass">
+                          <Icon name="check" size={14} /> Pass
+                        </span>
+                      )}
+                      {row.verdict === "fail" && (
+                        <span className="verdict-badge fail">
+                          <Icon name="alert" size={14} /> Fail
+                        </span>
+                      )}
+                      {row.verdict === "unchecked" && <span className="verdict-badge unknown">Not checked</span>}
+                      {confPct != null && (
+                        <span className="issue-acc-conf" title="Confidence of the wrong call">
+                          <strong>{confPct}%</strong>
+                          <span className="issue-acc-meter" aria-hidden>
+                            <span className="bg-danger" style={{ width: `${confPct}%` }} />
                           </span>
-                        )}
-                        {verdict === "fail" && (
-                          <span className="verdict-badge fail">
-                            <Icon name="alert" size={14} /> Fail
-                          </span>
-                        )}
-                        {verdict === "unknown" && <span className="verdict-badge unknown">Unchecked</span>}
-                        {verdict === "fail" && (
-                          <span className="issue-acc-conf">
-                            <strong>{confPct}%</strong>
-                            <span className="issue-acc-meter" aria-hidden>
-                              <span className="bg-danger" style={{ width: `${confPct}%` }} />
-                            </span>
-                          </span>
-                        )}
-                      </summary>
-                      <div className="issue-acc-body">
+                        </span>
+                      )}
+                    </summary>
+                    <div className="issue-acc-body">
+                      <p className="issue-reason">{row.reason}</p>
+                      {row.alerts.length > 0 && (
                         <dl className="issue-acc-meta">
                           <div>
-                            <dt>Predicted</dt>
-                            <dd>{a.fault_type.replaceAll("_", " ")}</dd>
-                          </div>
-                          <div>
                             <dt>Noticed</dt>
-                            <dd>{friendlyTime(a.alert_time_utc)}</dd>
+                            <dd>{row.alerts.map((a) => friendlyTime(a.alert_time_utc)).join(" · ")}</dd>
                           </div>
-                          {verdict === "fail" && (
+                          {confPct != null && row.failConfidence != null && (
                             <div>
                               <dt>Confidence</dt>
                               <dd>
-                                {confidenceLabel(a.confidence)} · {confPct}%
+                                {confidenceLabel(row.failConfidence)} · {confPct}%
                               </dd>
                             </div>
                           )}
-                          {a.true_fault_type && (
-                            <div>
-                              <dt>True fault</dt>
-                              <dd>{a.true_fault_type.replaceAll("_", " ")}</dd>
-                            </div>
-                          )}
                         </dl>
-                        {a.evidence && (
-                          <p className="issue-evidence">
-                            <strong>Evidence:</strong> {a.evidence}
-                          </p>
-                        )}
-                        {a.recommended_action && (
-                          <p className="issue-action">
-                            <Icon name="check" size={14} /> {plainStep(a.recommended_action)}
-                          </p>
-                        )}
-                      </div>
-                    </details>
-                  );
-                })}
-              </div>
-            )}
+                      )}
+                      {latest?.evidence && (
+                        <p className="issue-evidence">
+                          <strong>Evidence:</strong> {latest.evidence}
+                        </p>
+                      )}
+                      {row.detected && latest?.recommended_action && (
+                        <p className="issue-action">
+                          <Icon name="check" size={14} /> {plainStep(latest.recommended_action)}
+                        </p>
+                      )}
+                      {!row.detected && row.alerts.length === 0 && (
+                        <p className="muted">{explainFault(row.type).whatItMeans}</p>
+                      )}
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
 
             {data.trends.length > 0 && (
               <details className="issue-section-acc">

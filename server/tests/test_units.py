@@ -42,6 +42,19 @@ def test_ground_truth_labelling():
     assert (false_alarm.true_fault_type, false_alarm.correct) == ("NO_FAULT", False)
 
 
+def test_ground_truth_prefers_the_matching_fault_when_faults_overlap():
+    bearing = _alert("BEARING_WEAR", "2026-01-03T12:00:00Z")
+    comm = _alert("COMMUNICATION_LOSS", "2026-01-03T12:30:00Z", cls="SENSOR")
+    events = pd.DataFrame([
+        {"asset_id": "P1", "fault_type": "BEARING_WEAR", "onset_utc": "2026-01-01T00:00:00Z", "end_utc": None},
+        {"asset_id": "P1", "fault_type": "COMMUNICATION_LOSS", "onset_utc": "2026-01-03T11:00:00Z",
+         "end_utc": "2026-01-03T13:00:00Z"},
+    ])
+    _label_alerts([bearing, comm], events)
+    assert (bearing.true_fault_type, bearing.correct) == ("BEARING_WEAR", True)
+    assert (comm.true_fault_type, comm.correct) == ("COMMUNICATION_LOSS", True)
+
+
 def test_extra_pumps_in_optional_files_are_dropped_with_a_note():
     notes: list[str] = []
     snaps = pd.DataFrame({"asset_id": ["P1", "P2", "P2"], "samples": [[0.0], [1.0], [2.0]]})

@@ -43,6 +43,7 @@ _LOCK = threading.Lock()
 ISO = "%Y-%m-%dT%H:%M:%SZ"
 TREND_MAX_POINTS = 168  # one week of hourly points per series
 GROUND_TRUTH_GRACE = pd.Timedelta(hours=12)
+OPEN_ENDED = pd.Timestamp("2200-01-01", tz="UTC")
 
 CHANNELS: dict[str, tuple[str, str]] = {
     "motor_speed_rpm": ("Motor speed", "rpm"),
@@ -143,11 +144,16 @@ def _label_alerts(alerts: list[StoredAlert], events: pd.DataFrame) -> None:
         "onset": pd.to_datetime(events["onset_utc"], utc=True, format="ISO8601"),
         "end": pd.to_datetime(events["end_utc"], utc=True, format="ISO8601") if "end_utc" in events else pd.NaT,
     })
-    ev["end"] = ev["end"].fillna(pd.Timestamp.max.tz_localize("UTC") - GROUND_TRUTH_GRACE)
+    ev["end"] = ev["end"].fillna(OPEN_ENDED)  # fault still going at the end of the data
     for a in alerts:
         t = _ts(a.alert_time_utc)
         hit = ev[(ev.asset_id == a.asset_id) & (ev.onset <= t) & (t <= ev.end + GROUND_TRUTH_GRACE)]
-        a.true_fault_type = hit.sort_values("onset").iloc[-1].fault_type if len(hit) else "NO_FAULT"
+        if len(hit):
+            # several faults can overlap: like the official scorer, prefer the one the alert names, then the earliest
+            hit = hit.assign(_other=(hit.fault_type != a.fault_type.value).astype(int)).sort_values(["_other", "onset"])
+            a.true_fault_type = hit.iloc[0].fault_type
+        else:
+            a.true_fault_type = "NO_FAULT"
         a.correct = a.true_fault_type == a.fault_type.value
 
 
