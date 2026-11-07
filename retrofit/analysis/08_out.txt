@@ -1,0 +1,111 @@
+
+=== PUMP-08 (tier T1_RETROFIT, control VFD_TEMPERATURE) ===
+
+PUMP-08-E02 BEARING_WEAR [0.00d] det=10/15:51 ev=['vibration_crest_factor', 'vibration_accel_rms_g']
+   [0.00d] vibration_crest_factor=+nan  vibration_accel_rms_g=+nan
+   [0.25d] vibration_crest_factor=+nan  vibration_accel_rms_g=+nan
+   [0.50d] vibration_crest_factor=+nan  vibration_accel_rms_g=+nan
+   [0.75d] vibration_crest_factor=+nan  vibration_accel_rms_g=+nan
+   [1.00d] vibration_crest_factor=+0.0  vibration_accel_rms_g=+0.1
+   [1.25d] vibration_crest_factor=+nan  vibration_accel_rms_g=+nan
+   [1.50d] vibration_crest_factor=-0.2  vibration_accel_rms_g=+0.2
+   [1.75d] vibration_crest_factor=+0.1  vibration_accel_rms_g=+0.0
+   [2.00d] vibration_crest_factor=-0.0  vibration_accel_rms_g=-0.1
+   [2.25d] vibration_crest_factor=+0.8  vibration_accel_rms_g=-0.0
+   [2.50d] vibration_crest_factor=+1.5  vibration_accel_rms_g=-0.1
+   [2.75d] vibration_crest_factor=+2.7  vibration_accel_rms_g=-0.1
+   [3.00d] vibration_crest_factor=+2.4  vibration_accel_rms_g=+0.2
+   [3.25d] vibration_crest_factor=+2.8  vibration_accel_rms_g=+0.0
+   [3.50d] vibration_crest_factor=+3.1  vibration_accel_rms_g=+0.2
+   [3.75d] vibration_crest_factor=+3.1  vibration_accel_rms_g=+0.5
+   [4.00d] (no data)
+   [4.25d] (no data)
+   [4.50d] (no data)
+   [4.75d] (no data)
+   [5.00d] vibration_crest_factor=+4.0  vibration_accel_rms_g=+3.4
+   [5.25d] vibration_crest_factor=+4.0  vibration_accel_rms_g=+3.5
+   [5.50d] vibration_crest_factor=+2.6  vibration_accel_rms_g=+3.7
+   [5.75d] vibration_crest_factor=+1.6  vibration_accel_rms_g=+4.2
+   [6.00d] vibration_crest_factor=+nan  vibration_accel_rms_g=+nan
+   [6.25d] vibration_crest_factor=+0.8  vibration_accel_rms_g=+4.4
+   [6.50d] vibration_crest_factor=+0.6  vibration_accel_rms_g=+4.5
+   [6.75d] vibration_crest_factor=+0.4  vibration_accel_rms_g=+4.2
+
+PUMP-08-E01 SUCTION_STRAINER_CLOGGING [1.60d] det=09/15:51 ev=['suction_pressure_kpa', 'discharge_pressure_kpa', 'motor_power_kw']
+   [1.10d] suction_pressure_kpa=+0.7  discharge_pressure_kpa=+0.3  motor_power_kw=-0.0
+   [1.35d] suction_pressure_kpa=+0.1  discharge_pressure_kpa=+0.1  motor_power_kw=+0.0
+   [1.60d] suction_pressure_kpa=-0.4  discharge_pressure_kpa=-0.1  motor_power_kw=-0.0
+   [1.85d] suction_pressure_kpa=-1.1  discharge_pressure_kpa=-0.4  motor_power_kw=-0.1
+   [2.10d] suction_pressure_kpa=-1.2  discharge_pressure_kpa=-0.4  motor_power_kw=-0.2
+   [2.35d] suction_pressure_kpa=-1.2  discharge_pressure_kpa=-0.7  motor_power_kw=-0.2
+   [2.60d] suction_pressure_kpa=-1.0  discharge_pressure_kpa=-0.7  motor_power_kw=-0.2
+   [2.85d] suction_pressure_kpa=-0.5  discharge_pressure_kpa=-0.4  motor_power_kw=-0.2
+   [3.10d] suction_pressure_kpa=-0.7  discharge_pressure_kpa=-0.6  motor_power_kw=-0.2
+   [3.35d] suction_pressure_kpa=-0.7  discharge_pressure_kpa=-0.5  motor_power_kw=-0.1
+
+PUMP-08-E03 COMMUNICATION_LOSS [4.99d] det=12/23:51 ev=[]
+   [4.49d] (no data)
+   [4.74d] (no data)
+   [4.99d] motor_speed_rpm=-0.0  motor_current_a=-0.2  motor_power_kw=+0.1  suction_pressure_kpa=+0.3  discharge_pressure_kpa=+0.4  fluid_temp_c=+2.0
+
+PUMP-08-E04 SENSOR_NOISE_SPIKES [5.84d] det=13/20:18 ev=['discharge_pressure_kpa']
+   [5.34d] discharge_pressure_kpa=+0.2
+   [5.59d] discharge_pressure_kpa=-0.1
+   [5.84d] discharge_pressure_kpa=-0.2
+   [6.09d] discharge_pressure_kpa=+0.1
+
+=== PUMP-09 (tier T2_FULL, control FIXED_SPEED) ===
+
+PUMP-09-E04 SENSOR_DRIFT [0.25d] det=09/09:21 ev=['motor_current_a']
+   [0.00d] motor_current_a=+nan
+   [0.25d] motor_current_a=+0.4
+   [0.50d] motor_current_a=+0.8
+   [0.75d] motor_current_a=+1.1
+   [1.00d] motor_current_a=+0.6
+   [1.25d] motor_current_a=+0.8
+   [1.50d] motor_current_a=+0.5
+   [1.75d] motor_current_a=+0.4
+   [2.00d] motor_current_a=+0.9
+   [2.25d] motor_current_a=-0.1
+
+PUMP-09-E01 MISALIGNMENT [1.19d] det=10/06:03 ev=['vibration_rms_mm_s', 'bearing_temp_c', 'motor_power_kw', 'motor_winding_temp_c']
+   [0.69d] vibration_rms_mm_s=+0.3  bearing_temp_c=+0.3  motor_power_kw=-0.0  motor_winding_temp_c=+0.5
+   [0.94d] vibration_rms_mm_s=+0.1  bearing_temp_c=-0.7  motor_power_kw=+0.0  motor_winding_temp_c=-0.8
+   [1.19d] vibration_rms_mm_s=+15.3  bearing_temp_c=+0.7  motor_power_kw=+0.9  motor_winding_temp_c=+0.0
+   [1.44d] vibration_rms_mm_s=+0.2  bearing_temp_c=+0.8  motor_power_kw=+0.1  motor_winding_temp_c=+0.8
+   [1.69d] vibration_rms_mm_s=+0.1  bearing_temp_c=-0.1  motor_power_kw=+0.0  motor_winding_temp_c=-0.2
+   [1.94d] vibration_rms_mm_s=+0.4  bearing_temp_c=-1.6  motor_power_kw=+0.1  motor_winding_temp_c=-1.4
+   [2.19d] vibration_rms_mm_s=+0.6  bearing_temp_c=+0.2  motor_power_kw=+0.0  motor_winding_temp_c=-0.1
+   [2.44d] vibration_rms_mm_s=+0.4  bearing_temp_c=+0.6  motor_power_kw=-0.0  motor_winding_temp_c=+0.8
+   [2.69d] vibration_rms_mm_s=+0.4  bearing_temp_c=-0.0  motor_power_kw=+0.0  motor_winding_temp_c=+0.1
+   [2.94d] vibration_rms_mm_s=+0.6  bearing_temp_c=-0.7  motor_power_kw=+0.1  motor_winding_temp_c=-3.8
+   [3.19d] vibration_rms_mm_s=+0.5  bearing_temp_c=+0.0  motor_power_kw=+0.0  motor_winding_temp_c=+0.4
+   [3.44d] vibration_rms_mm_s=+0.3  bearing_temp_c=+0.0  motor_power_kw=-0.0  motor_winding_temp_c=+0.4
+   [3.69d] vibration_rms_mm_s=+0.4  bearing_temp_c=+1.8  motor_power_kw=+0.0  motor_winding_temp_c=+0.3
+   [3.94d] vibration_rms_mm_s=+0.7  bearing_temp_c=-4.3  motor_power_kw=+0.1  motor_winding_temp_c=-0.9
+
+PUMP-09-E03 SENSOR_STUCK [2.93d] det=11/22:26 ev=['bearing_temp_c']
+   [2.43d] bearing_temp_c=+0.6
+   [2.68d] bearing_temp_c=+0.0
+   [2.93d] bearing_temp_c=-0.7
+   [3.18d] bearing_temp_c=+0.0
+   [3.43d] bearing_temp_c=+0.0
+   [3.68d] bearing_temp_c=+1.8
+
+PUMP-09-E02 DISCHARGE_RESTRICTION [5.04d] det=14/00:54 ev=['flow_m3_h', 'discharge_pressure_kpa', 'suction_pressure_kpa', 'motor_power_kw']
+   [4.54d] flow_m3_h=+0.0  discharge_pressure_kpa=-0.2  suction_pressure_kpa=-0.5  motor_power_kw=-0.0
+   [4.79d] flow_m3_h=+0.0  discharge_pressure_kpa=+0.0  suction_pressure_kpa=+0.1  motor_power_kw=+0.0
+   [5.04d] flow_m3_h=-28.3  discharge_pressure_kpa=+4.2  suction_pressure_kpa=+0.8  motor_power_kw=-7.7
+   [5.29d] flow_m3_h=-0.0  discharge_pressure_kpa=+0.1  suction_pressure_kpa=+0.6  motor_power_kw=-0.0
+   [5.54d] flow_m3_h=-0.0  discharge_pressure_kpa=+0.0  suction_pressure_kpa=+0.2  motor_power_kw=-0.0
+   [5.79d] flow_m3_h=-0.0  discharge_pressure_kpa=-0.0  suction_pressure_kpa=-0.0  motor_power_kw=+0.0
+   [6.04d] flow_m3_h=+0.0  discharge_pressure_kpa=+0.4  suction_pressure_kpa=+0.9  motor_power_kw=+0.0
+   [6.29d] flow_m3_h=-5.3  discharge_pressure_kpa=-8.5  suction_pressure_kpa=-5.8  motor_power_kw=-7.0
+   [6.54d] flow_m3_h=+0.7  discharge_pressure_kpa=+0.7  suction_pressure_kpa=+0.7  motor_power_kw=+0.7
+   [6.79d] flow_m3_h=+0.1  discharge_pressure_kpa=+0.0  suction_pressure_kpa=+0.1  motor_power_kw=+0.0
+
+PUMP-09-E06 AIR_ENTRAINMENT [6.31d] det=15/07:23 ev=['discharge_pressure_kpa', 'flow_m3_h', 'motor_power_kw', 'motor_winding_temp_c']
+   [5.81d] discharge_pressure_kpa=+0.0  flow_m3_h=-0.0  motor_power_kw=+0.0  motor_winding_temp_c=-0.6
+   [6.06d] discharge_pressure_kpa=+0.4  flow_m3_h=+0.0  motor_power_kw=+0.0  motor_winding_temp_c=-1.0
+   [6.31d] discharge_pressure_kpa=-8.5  flow_m3_h=-5.4  motor_power_kw=-7.1  motor_winding_temp_c=-1.3
+   [6.56d] discharge_pressure_kpa=+0.7  flow_m3_h=+0.7  motor_power_kw=+0.7  motor_winding_temp_c=+1.0
