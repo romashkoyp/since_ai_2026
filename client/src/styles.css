@@ -2341,3 +2341,26 @@ p {
 .issue-occ {
   white-space: nowrap;
 }
+
+/* Fleet tiles: the Health row sits at the bottom of the tile body, so it lines up across a row
+   whatever the name / badge above it takes (cards in a row already share one height) */
+.pump-grid > li {
+  display: flex;
+}
+
+.pump-grid > li > .pump-tile {
+  flex: 1;
+}
+
+.pump-tile-row {
+  margin-top: auto;
+  padding-top: 0.35rem;
+}
+
+.pump-tile-system {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
