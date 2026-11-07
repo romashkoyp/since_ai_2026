@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchAlerts, fetchAssets, fetchFleetSummary, fetchHealth } from "./api/client";
+import { fetchAlerts, fetchAssets, fetchFleetSummary, fetchHealth, fetchLatestAnalysis } from "./api/client";
+import { AnalysisDialog } from "./components/AnalysisDialog";
 import { CockpitView } from "./components/CockpitView";
 import { FleetView, StatusBadge } from "./components/FleetView";
 import { Icon } from "./components/Icon";
 import { LoadingBlock } from "./components/LoadingBlock";
 import { DUMMY_ALERTS, DUMMY_ASSETS, DUMMY_SUMMARY } from "./data/dummy";
+import { friendlyTime } from "./lib/plain";
 import type {
   AlertPrediction,
+  AnalysisRun,
   AssetStatus,
   CockpitMode,
   FleetSummary,
@@ -28,6 +31,8 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [run, setRun] = useState<AnalysisRun | null>(null);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
   const hasData = useRef(false);
 
   useEffect(() => {
@@ -38,26 +43,29 @@ export default function App() {
       else setInitialLoading(true);
 
       try {
-        const health = await fetchHealth();
+        const health = await fetchHealth(ac.signal);
         if (ac.signal.aborted) return;
         if (health.status !== "ok") throw new Error("API not ready");
 
-        const [nextSummary, nextAssets, nextAlerts] = await Promise.all([
-          fetchFleetSummary(),
-          fetchAssets(),
-          fetchAlerts(),
+        const [nextSummary, nextAssets, nextAlerts, nextRun] = await Promise.all([
+          fetchFleetSummary(ac.signal),
+          fetchAssets(ac.signal),
+          fetchAlerts(undefined, [], ac.signal),
+          fetchLatestAnalysis(ac.signal),
         ]);
         if (ac.signal.aborted) return;
 
         setSummary(nextSummary);
         setAssets(nextAssets);
         setAlerts(nextAlerts);
+        setRun(nextRun);
         setSource("live");
       } catch {
         if (ac.signal.aborted) return;
         setSummary(DUMMY_SUMMARY);
         setAssets(DUMMY_ASSETS);
         setAlerts(DUMMY_ALERTS);
+        setRun(null);
         setSource("demo");
       } finally {
         if (!ac.signal.aborted) {
@@ -74,6 +82,12 @@ export default function App() {
 
   const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
 
+  const onAnalysisCompleted = useCallback(() => {
+    setScreen("fleet");
+    setSelectedAsset(null);
+    refresh();
+  }, [refresh]);
+
   function openPump(assetId: string, mode: CockpitMode) {
     setSelectedAsset(assetId);
     setCockpitMode(mode);
@@ -82,7 +96,9 @@ export default function App() {
   }
 
   const selected = assets.find((a) => a.asset_id === selectedAsset) ?? null;
-  const selectedAlert = alerts.find((a) => a.asset_id === selectedAsset) ?? null;
+  const selectedAlerts = alerts.filter((a) => a.asset_id === selectedAsset);
+  // alerts arrive oldest first; the pump page describes the most recent one
+  const selectedAlert = selectedAlerts.at(-1) ?? null;
 
   return (
     <div className="app">
@@ -138,6 +154,16 @@ export default function App() {
             </div>
             <button
               type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => setAnalysisOpen(true)}
+              disabled={source === "demo"}
+              title={source === "demo" ? "The live system is not reachable" : "Upload pump data and run the model"}
+            >
+              <Icon name="upload" size={14} />
+              Analyse data
+            </button>
+            <button
+              type="button"
               className="icon-btn"
               onClick={refresh}
               disabled={initialLoading || refreshing}
@@ -164,6 +190,29 @@ export default function App() {
           </div>
         )}
 
+        {source === "live" && run && !initialLoading && (
+          <p className="run-strip" role="status">
+            <Icon name="clock" size={14} />
+            <span>
+              Results from model <strong>{run.model_version}</strong> for {run.pumps} pump{run.pumps === 1 ? "" : "s"}
+              {run.data_end_utc ? ` · data up to ${friendlyTime(run.data_end_utc)}` : ""}
+              {" · "}
+              {run.source === "seed" ? "built-in demo data" : (run.label ?? "uploaded data")}
+              {" · "}analysed {friendlyTime(run.created_utc)}
+            </span>
+          </p>
+        )}
+
+        {source === "live" && !run && !initialLoading && (
+          <div className="notice" role="status">
+            <Icon name="upload" size={18} />
+            <span>No pump data has been analysed yet. Upload a datasheet and telemetry to run the model.</span>
+            <button type="button" className="link-btn" onClick={() => setAnalysisOpen(true)}>
+              Analyse data
+            </button>
+          </div>
+        )}
+
         {screen === "fleet" &&
           (initialLoading ? (
             <LoadingBlock label="Checking all pumps…" variant="overview" />
@@ -182,7 +231,7 @@ export default function App() {
             assetId={selectedAsset}
             asset={selected}
             alert={selectedAlert}
-            assetAlerts={alerts.filter((a) => a.asset_id === selectedAsset)}
+            assetAlerts={selectedAlerts}
             mode={cockpitMode}
             onModeChange={setCockpitMode}
             onBack={() => setScreen("fleet")}
@@ -190,6 +239,12 @@ export default function App() {
           />
         )}
       </main>
+
+      <AnalysisDialog
+        open={analysisOpen}
+        onClose={() => setAnalysisOpen(false)}
+        onCompleted={onAnalysisCompleted}
+      />
 
       <footer className="footer">
         <Icon name="shield" size={14} />

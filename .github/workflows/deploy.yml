@@ -98,7 +98,7 @@ jobs:
           host: ${{ secrets.OCI_BE_HOST }}
           username: ${{ secrets.OCI_SSH_USER }}
           key: ${{ secrets.OCI_BE_SSH_PRIVATE_KEY }}
-          source: "server"
+          source: "server,retrofit_engine,.dockerignore"
           target: "since_ai_deploy"
           overwrite: true
           rm: true
@@ -112,8 +112,8 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
-            cd ~/since_ai_deploy/server
-            docker build -t since-ai-server:latest .
+            cd ~/since_ai_deploy
+            docker build -f server/Dockerfile -t since-ai-server:latest .
             docker rm -f since-ai-server || true
             docker run -d \
               --name since-ai-server \
