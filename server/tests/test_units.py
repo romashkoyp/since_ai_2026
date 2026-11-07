@@ -72,6 +72,30 @@ def test_extra_pumps_in_optional_files_are_dropped_with_a_note():
     assert _only_known_pumps(None, {"P1"}, "context", []) is None
 
 
+def test_rebuilt_seed_replaces_old_seed_but_never_an_upload(tmp_path):
+    import json
+
+    from src.db import MemoryRunStore, ensure_seed
+    from src.models import AnalysisRecord, AnalysisRunSummary
+
+    def record(run_id: str, source: str, created: str) -> AnalysisRecord:
+        s = AnalysisRunSummary(run_id=run_id, created_utc=created, source=source, model_version="m", use_ml=True,
+                               pumps=0, alerts=0, ml_overrides=0, by_fault_type={}, processing_seconds=0)
+        return AnalysisRecord(summary=s, alerts=[], assets=[], cockpits=[])
+
+    seed = tmp_path / "seed.json"
+    seed.write_text(json.dumps(record("new-seed", "seed", "2026-01-02T00:00:00Z").model_dump(mode="json")))
+    store = MemoryRunStore()
+    store.save(record("old-seed", "seed", "2026-01-01T00:00:00Z"))
+    ensure_seed(store, seed)
+    assert store.latest().summary.run_id == "new-seed"
+    ensure_seed(store, seed)                                  # idempotent
+    assert len(store.list()) == 2
+    store.save(record("upload", "upload", "2026-01-03T00:00:00Z"))
+    ensure_seed(store, seed)
+    assert store.latest().summary.run_id == "upload"
+
+
 def test_sandbox_affinity_laws():
     state = PumpState(speed_rpm=1480, flow_m3_h=300, suction_kpa=20, fluid_temp_c=30, power_kw=30)
     r = simulate(state, SHEET, "CAVITATION", 0.9, True, energy_price_eur_kwh=0.2, cooling_min_flow_fraction=0.8)

@@ -126,13 +126,21 @@ def open_store(settings: Settings) -> RunStore:
 
 
 def ensure_seed(store: RunStore, seed_path: Path) -> None:
-    """Load the bundled demo run when the store has no runs yet, so the dashboard shows model output at once."""
-    if store.latest() is not None:
+    """Load the bundled demo run so the dashboard shows model output at once.
+
+    Loaded when the store is empty, or when the newest run is an older demo run (a rebuilt seed file replaces it).
+    A user's uploaded run is never displaced.
+    """
+    latest = store.latest()
+    if latest is not None and latest.summary.source != "seed":
         return
     if not seed_path.exists():
-        log.warning("Seed run: %s not found; dashboard is empty until data is uploaded", seed_path)
+        if latest is None:
+            log.warning("Seed run: %s not found; dashboard is empty until data is uploaded", seed_path)
         return
     record = AnalysisRecord.model_validate(json.loads(seed_path.read_text(encoding="utf-8")))
+    if latest is not None and latest.summary.run_id == record.summary.run_id:
+        return
     store.save(record)
     log.info("Seed run: loaded %s (%d pumps, %d alerts)", record.summary.run_id, record.summary.pumps,
              record.summary.alerts)
