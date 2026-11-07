@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { downloadPredictionAlertsCsv } from "../lib/alertsCsv";
 import {
   healthScore,
   SEVERITY_LABEL,
@@ -7,12 +8,13 @@ import {
   systemLabel,
   type Severity,
 } from "../lib/plain";
-import type { AssetStatus, FleetSummary } from "../types/alerts";
+import type { AlertPrediction, AssetStatus, FleetSummary } from "../types/alerts";
 import { Icon } from "./Icon";
 
 interface Props {
   summary: FleetSummary | null;
   assets: AssetStatus[];
+  alerts: AlertPrediction[];
   onDiagnose: (assetId: string) => void;
   onPredict: (assetId: string) => void;
 }
@@ -50,6 +52,7 @@ export function HealthBar({ value }: { value: number }) {
 export function FleetView({
   summary,
   assets,
+  alerts,
   onDiagnose,
   onPredict,
 }: Props) {
@@ -109,15 +112,32 @@ export function FleetView({
       <section className="section">
         <div className="section-title">
           <h2>All pumps</h2>
-          <div className="search">
-            <Icon name="search" size={16} />
-            <input
-              type="search"
-              placeholder="Search pump, system or location"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              aria-label="Search pumps"
-            />
+          <div className="section-actions">
+            <div className="search">
+              <Icon name="search" size={16} />
+              <input
+                type="search"
+                placeholder="Search pump, system or location"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Search pumps"
+              />
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm download-csv-btn"
+              disabled={alerts.length === 0}
+              onClick={() =>
+                downloadPredictionAlertsCsv(
+                  alerts,
+                  `predictions_alerts_${new Date().toISOString().slice(0, 10)}.csv`,
+                )
+              }
+              title="Download prediction alerts as CSV"
+            >
+              <Icon name="download" size={14} />
+              Download CSV
+            </button>
           </div>
         </div>
 

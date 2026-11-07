@@ -171,6 +171,7 @@ export default function App() {
             <FleetView
               summary={summary}
               assets={assets}
+              alerts={alerts}
               onDiagnose={(id) => openPump(id, "diagnose")}
               onPredict={(id) => openPump(id, "predict")}
             />
