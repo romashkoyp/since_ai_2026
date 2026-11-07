@@ -47,8 +47,14 @@ const FIELDS: FieldSpec[] = [
 
 type Files = Partial<Record<AnalysisFileField, File>>;
 
-function mb(bytes: number): string {
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+const MB = 1_000_000; // decimal units, as macOS Finder / Windows Explorer show file sizes (and the server limit)
+
+/** Human-readable size: 553 bytes · 12 KB · 6.6 MB · 1.2 GB */
+function formatSize(bytes: number): string {
+  if (bytes < 1000) return `${bytes} bytes`;
+  if (bytes < 999_500) return `${Math.round(bytes / 1000)} KB`; // switch before it would round to "1000 KB"
+  if (bytes < 999_950 * 1000) return `${(bytes / MB).toFixed(1)} MB`;
+  return `${(bytes / (1000 * MB)).toFixed(1)} GB`;
 }
 
 export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
@@ -82,7 +88,7 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const maxBytes = (model?.max_upload_mb ?? Infinity) * 1024 * 1024;
+  const maxBytes = (model?.max_upload_mb ?? Infinity) * MB;
   const tooBig = FIELDS.find((f) => (files[f.name]?.size ?? 0) > maxBytes);
   const canSubmit = !!files.datasheet && !!files.telemetry && !tooBig && !running && model?.available !== false;
 
@@ -188,7 +194,11 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
                   }}
                 />
                 <span className="file-help">
-                  {over ? `Too large (${mb(file.size)}); the limit is ${model?.max_upload_mb} MB.` : file ? `${file.name} · ${mb(file.size)}` : f.help}
+                  {over
+                    ? `Too large (${formatSize(file.size)}); the limit is ${model?.max_upload_mb} MB.`
+                    : file
+                      ? `${file.name} · ${formatSize(file.size)}`
+                      : f.help}
                 </span>
               </label>
             );
