@@ -79,6 +79,17 @@ table (`asset_id, fault_type, onset_utc, end_utc`); when given, each alert gets 
 | `COOLING_MIN_FLOW_FRACTION` | 0.8 | share of today's flow the cooled system needs (sandbox cooling margin) |
 | `SEED_RUN_PATH` | `seed/demo_run.json` | run loaded into an empty store |
 
+## Make files for the upload dialog
+
+```bash
+python ../retrofit/make_dataset.py --tier full --output /tmp/retrofit_full     # simulator, ~25 s (needs pyyaml)
+python -m scripts.make_upload_files --data /tmp/retrofit_full/public --out ~/Desktop/zerofault_upload
+```
+
+Writes `datasheet.csv`, `telemetry` / `baseline` / `context` as Parquet (same 1-minute data as CSV, identical results,
+~3x smaller: 9 pumps ≈ 20 MB), `snapshots.parquet` and `events.csv` (known faults → Correct / Wrong). Options:
+`--pumps PUMP-08 PUMP-09`, `--format csv`, `--baseline-hours 30`.
+
 ## Rebuild the demo seed run
 
 After a new model is exported into `retrofit_engine/model/`:

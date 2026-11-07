@@ -418,7 +418,10 @@ curl http://localhost:8000/api/cockpit/PUMP-09
 curl -OJ http://localhost:8000/api/analyses/<run_id>/alerts.csv
 ```
 
-Demo upload files: `python -m retrofit_engine.tools.make_demo_files --data <dataset>/public --pumps PUMP-08 PUMP-09 --out demo_files`.
+Demo upload files (Parquet, all pumps, plus `events.csv` for scoring — e.g. 9 pumps ≈ 20 MB instead of 55 MB as CSV):
+`cd server && python -m scripts.make_upload_files --data <dataset>/public --out ~/Desktop/zerofault_upload`
+(`--pumps PUMP-08 PUMP-09` for a subset, `--format csv` for CSV). Keep 1-minute rows: hourly data would break the
+detector (15-minute persistence, per-minute gap checks).
 
 **TypeScript (client/src/api/client.ts)**
 
