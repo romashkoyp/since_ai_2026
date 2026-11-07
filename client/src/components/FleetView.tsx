@@ -1,14 +1,11 @@
 import { useMemo, useState } from "react";
+import { downloadPredictionAlertsCsv } from "../lib/alertsCsv";
 import {
-  alertFor,
-  explainFault,
   healthScore,
-  modeLabel,
   SEVERITY_LABEL,
   SEVERITY_ORDER,
   severityOf,
   systemLabel,
-  timeLeftLabel,
   type Severity,
 } from "../lib/plain";
 import type { AlertPrediction, AssetStatus, FleetSummary } from "../types/alerts";
@@ -18,8 +15,6 @@ interface Props {
   summary: FleetSummary | null;
   assets: AssetStatus[];
   alerts: AlertPrediction[];
-  updatedAt: Date | null;
-  refreshing: boolean;
   onDiagnose: (assetId: string) => void;
   onPredict: (assetId: string) => void;
 }
@@ -58,8 +53,6 @@ export function FleetView({
   summary,
   assets,
   alerts,
-  updatedAt,
-  refreshing,
   onDiagnose,
   onPredict,
 }: Props) {
@@ -83,32 +76,6 @@ export function FleetView({
   }, [assets]);
 
   const total = summary?.total ?? assets.length;
-  const okPct = total ? Math.round((counts.ok / total) * 100) : 0;
-
-  const hero: { tone: Severity; title: string; text: string } =
-    counts.act_now > 0
-      ? {
-          tone: "act_now",
-          title: `${counts.act_now} pump${counts.act_now > 1 ? "s need" : " needs"} action now`,
-          text: "Start with the red pumps below. Tap a pump to see what is wrong and what to do.",
-        }
-      : counts.attention > 0
-        ? {
-            tone: "attention",
-            title: `${counts.attention} pump${counts.attention > 1 ? "s need" : " needs"} attention soon`,
-            text: "Nothing is urgent right now, but plan these checks in the coming days.",
-          }
-        : counts.sensor > 0
-          ? {
-              tone: "sensor",
-              title: "Pumps are fine — a sensor needs checking",
-              text: "The machines are healthy. One measuring device is giving unreliable readings.",
-            }
-          : {
-              tone: "ok",
-              title: "All pumps are working well",
-              text: "No action needed. We will alert you if anything changes.",
-            };
 
   const visible = ranked.filter((a) => {
     if (filter !== "all" && severityOf(a) !== filter) return false;
@@ -123,28 +90,6 @@ export function FleetView({
 
   return (
     <div className="overview">
-      <section className={`hero sev-${hero.tone}`} aria-live="polite">
-        <div className="hero-icon">
-          <Icon name={SEVERITY_ICON[hero.tone]} size={28} />
-        </div>
-        <div className="hero-text">
-          <h1>{hero.title}</h1>
-          <p>{hero.text}</p>
-          <p className="hero-meta">
-            {summary?.vessel ?? "Your fleet"} · {total} pumps watched
-            {updatedAt && ` · Updated ${updatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
-            {refreshing && " · Updating…"}
-          </p>
-        </div>
-        <div className="hero-score">
-          <span className="hero-score-value">{okPct}%</span>
-          <span className="hero-score-label">
-            of pumps working normally
-            <br />({counts.ok} of {total})
-          </span>
-        </div>
-      </section>
-
       <section className="filters" aria-label="Filter pumps by status">
         {(["act_now", "attention", "sensor", "ok"] as Severity[]).map((sev) => (
           <button
@@ -167,15 +112,32 @@ export function FleetView({
       <section className="section">
         <div className="section-title">
           <h2>All pumps</h2>
-          <div className="search">
-            <Icon name="search" size={16} />
-            <input
-              type="search"
-              placeholder="Search pump, system or location"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              aria-label="Search pumps"
-            />
+          <div className="section-actions">
+            <div className="search">
+              <Icon name="search" size={16} />
+              <input
+                type="search"
+                placeholder="Search pump, system or location"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Search pumps"
+              />
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm download-csv-btn"
+              disabled={alerts.length === 0}
+              onClick={() =>
+                downloadPredictionAlertsCsv(
+                  alerts,
+                  `predictions_alerts_${new Date().toISOString().slice(0, 10)}.csv`,
+                )
+              }
+              title="Download prediction alerts as CSV"
+            >
+              <Icon name="download" size={14} />
+              Download CSV
+            </button>
           </div>
         </div>
 
@@ -192,9 +154,6 @@ export function FleetView({
           <ul className="pump-grid">
             {visible.map((asset) => {
               const sev = severityOf(asset);
-              const failing = sev !== "ok";
-              const alert = alertFor(asset.asset_id, alerts);
-              const timeLeft = timeLeftLabel(asset.rul_hours);
               return (
                 <li key={asset.asset_id}>
                   <div className={`pump-tile sev-${sev}`}>
@@ -208,21 +167,10 @@ export function FleetView({
                         <StatusBadge severity={sev} />
                       </div>
                       <p className="pump-tile-system">{systemLabel(asset.system)}</p>
-                      <p className="pump-tile-site">{asset.site}</p>
-                      {failing && (
-                        <p className="pump-tile-fault">
-                          {alert ? explainFault(alert.fault_type).title : asset.fault_summary ?? "Unusual behaviour"}
-                          {timeLeft && <span> · safe for {timeLeft}</span>}
-                        </p>
-                      )}
                       <div className="pump-tile-row">
                         <span>Health</span>
                         <HealthBar value={healthScore(asset)} />
                       </div>
-                      <p className="pump-tile-mode">
-                        {modeLabel(asset.mode)}
-                        {asset.mode === "RUNNING" && ` at ${Math.round(asset.load_pct)}% power`}
-                      </p>
                     </button>
                     <div className="pump-tile-actions">
                       {sev !== "ok" && (
