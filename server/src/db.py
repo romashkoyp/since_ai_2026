@@ -1,135 +1,146 @@
-"""MongoDB Atlas access. Falls back to in-memory sample data when MONGODB_URI is unset or unreachable."""
+"""Persistence for analysis runs: MongoDB Atlas when MONGODB_URI is set and reachable, else in-process memory.
+
+A run (AnalysisRecord) is written once and never changed, so readers can cache it by run_id.
+The dashboard always shows the most recent run.
+"""
 
 from __future__ import annotations
 
-import csv
+import json
 import logging
-import os
+import threading
+from collections import OrderedDict
 from pathlib import Path
+from typing import Protocol
 
-from pymongo import ASCENDING, MongoClient
+from pymongo import DESCENDING, MongoClient
 from pymongo.database import Database
 from pymongo.errors import PyMongoError
 
-from .models import AlertPrediction, AssetStatus
-from .sample_data import SAMPLE_ALERTS, SAMPLE_ASSETS
+from .models import AnalysisRecord, AnalysisRunSummary
+from .settings import Settings
 
 # Use uvicorn's logger so startup messages show in the terminal.
 log = logging.getLogger("uvicorn.error")
 
-SEED_ALERTS_CSV = Path(__file__).resolve().parent.parent / "seed" / "company_train_alerts.csv"
-
-_client: MongoClient | None = None
-_db: Database | None = None
+RUNS = "analysis_runs"
 
 
-def connect() -> Database | None:
-    """Open the Atlas connection once; return None when Mongo is not configured or down."""
-    global _client, _db
-    if _db is not None:
-        return _db
+class RunStore(Protocol):
+    backend: str
 
-    uri = os.getenv("MONGODB_URI", "").strip()
-    if not uri:
-        log.warning("MongoDB: not connected — MONGODB_URI missing; using in-memory sample data")
-        return None
+    def save(self, record: AnalysisRecord) -> None: ...
+    def latest(self) -> AnalysisRecord | None: ...
+    def get(self, run_id: str) -> AnalysisRecord | None: ...
+    def list(self, limit: int = 20) -> list[AnalysisRunSummary]: ...
+    def close(self) -> None: ...
 
-    db_name = os.getenv("MONGODB_DB", "since_ai")
-    log.info("MongoDB: connecting to Atlas (database=%s)…", db_name)
+
+class MemoryRunStore:
+    backend = "memory"
+
+    def __init__(self) -> None:
+        self._runs: dict[str, AnalysisRecord] = {}
+        self._lock = threading.Lock()
+
+    def save(self, record: AnalysisRecord) -> None:
+        with self._lock:
+            self._runs[record.summary.run_id] = record
+
+    def _ordered(self) -> list[AnalysisRecord]:
+        with self._lock:
+            return sorted(self._runs.values(), key=lambda r: r.summary.created_utc, reverse=True)
+
+    def latest(self) -> AnalysisRecord | None:
+        runs = self._ordered()
+        return runs[0] if runs else None
+
+    def get(self, run_id: str) -> AnalysisRecord | None:
+        with self._lock:
+            return self._runs.get(run_id)
+
+    def list(self, limit: int = 20) -> list[AnalysisRunSummary]:
+        return [r.summary for r in self._ordered()[:limit]]
+
+    def close(self) -> None:
+        pass
+
+
+class MongoRunStore:
+    backend = "mongodb"
+    _CACHE_SIZE = 4
+
+    def __init__(self, client: MongoClient, db: Database) -> None:
+        self._client = client
+        self._runs = db[RUNS]
+        self._runs.create_index([("summary.created_utc", DESCENDING)])
+        self._cache: OrderedDict[str, AnalysisRecord] = OrderedDict()
+        self._lock = threading.Lock()
+
+    def _remember(self, record: AnalysisRecord) -> AnalysisRecord:
+        with self._lock:
+            self._cache[record.summary.run_id] = record
+            self._cache.move_to_end(record.summary.run_id)
+            while len(self._cache) > self._CACHE_SIZE:
+                self._cache.popitem(last=False)
+        return record
+
+    def save(self, record: AnalysisRecord) -> None:
+        self._runs.insert_one({"_id": record.summary.run_id, **record.model_dump(mode="json")})
+        self._remember(record)
+
+    def get(self, run_id: str) -> AnalysisRecord | None:
+        with self._lock:
+            if run_id in self._cache:
+                return self._cache[run_id]
+        doc = self._runs.find_one({"_id": run_id}, {"_id": 0})
+        return self._remember(AnalysisRecord.model_validate(doc)) if doc else None
+
+    def latest(self) -> AnalysisRecord | None:
+        head = self._runs.find_one({}, {"_id": 1}, sort=[("summary.created_utc", DESCENDING)])
+        return self.get(head["_id"]) if head else None
+
+    def list(self, limit: int = 20) -> list[AnalysisRunSummary]:
+        cursor = self._runs.find({}, {"_id": 0, "summary": 1}).sort("summary.created_utc", DESCENDING).limit(limit)
+        return [AnalysisRunSummary.model_validate(d["summary"]) for d in cursor]
+
+    def close(self) -> None:
+        self._client.close()
+
+
+def open_store(settings: Settings) -> RunStore:
+    """Connect to Atlas when configured; fall back to memory so the API always starts."""
+    if not settings.mongodb_uri:
+        log.warning("MongoDB: not connected — MONGODB_URI missing; runs are kept in memory")
+        return MemoryRunStore()
+    log.info("MongoDB: connecting to Atlas (database=%s)…", settings.mongodb_db)
     try:
-        client = MongoClient(uri, serverSelectionTimeoutMS=8000, appname="since-ai-server")
+        client = MongoClient(settings.mongodb_uri, serverSelectionTimeoutMS=8000, appname="since-ai-server")
         client.admin.command("ping")
+        store = MongoRunStore(client, client[settings.mongodb_db])
     except PyMongoError as exc:
-        log.warning("MongoDB: not connected — %s; using in-memory sample data", exc)
-        return None
-
-    _client = client
-    _db = client[db_name]
-    _ensure_indexes(_db)
-    _seed_if_empty(_db)
-    alerts_n = _db.alerts.estimated_document_count()
-    assets_n = _db.assets.estimated_document_count()
-    log.info(
-        "MongoDB: connected — database=%s alerts=%s assets=%s",
-        _db.name,
-        alerts_n,
-        assets_n,
-    )
-    return _db
+        log.warning("MongoDB: not connected — %s; runs are kept in memory", exc)
+        return MemoryRunStore()
+    log.info("MongoDB: connected — database=%s", settings.mongodb_db)
+    return store
 
 
-def close() -> None:
-    global _client, _db
-    if _client is not None:
-        _client.close()
-    _client = None
-    _db = None
+def ensure_seed(store: RunStore, seed_path: Path) -> None:
+    """Load the bundled demo run so the dashboard shows model output at once.
 
-
-def status() -> str:
-    return "connected" if _db is not None else "disabled"
-
-
-def _ensure_indexes(db: Database) -> None:
-    db.alerts.create_index([("asset_id", ASCENDING), ("alert_time_utc", ASCENDING)])
-    db.assets.create_index("asset_id", unique=True)
-
-
-def _load_seed_alerts() -> list[AlertPrediction]:
-    if not SEED_ALERTS_CSV.exists():
-        return SAMPLE_ALERTS
-    rows: list[AlertPrediction] = []
-    with SEED_ALERTS_CSV.open(newline="") as f:
-        for r in csv.DictReader(f):
-            correct = (r.get("correct") or "").strip().lower()
-            rows.append(
-                AlertPrediction(
-                    asset_id=r["asset_id"],
-                    alert_time_utc=r["alert_time_utc"],
-                    event_class=r["event_class"],
-                    fault_type=r["fault_type"],
-                    confidence=float(r["confidence"]),
-                    evidence=r.get("evidence") or None,
-                    recommended_action=r.get("recommended_action") or None,
-                    true_fault_type=r.get("true_fault_type") or None,
-                    correct=True if correct == "true" else False if correct == "false" else None,
-                )
-            )
-    return rows
-
-
-def _seed_if_empty(db: Database) -> None:
-    if db.alerts.estimated_document_count() == 0:
-        docs = [a.model_dump(mode="json") for a in _load_seed_alerts()]
-        if docs:
-            db.alerts.insert_many(docs)
-            log.info("MongoDB: seeded %d alerts", len(docs))
-    if db.assets.estimated_document_count() == 0:
-        db.assets.insert_many([a.model_dump(mode="json") for a in SAMPLE_ASSETS])
-        log.info("MongoDB: seeded %d assets", len(SAMPLE_ASSETS))
-
-
-def get_alerts(asset_id: str | None = None, event_class: str | None = None) -> list[AlertPrediction]:
-    db = connect()
-    if db is None:
-        alerts = SAMPLE_ALERTS
-        if asset_id:
-            alerts = [a for a in alerts if a.asset_id == asset_id]
-        if event_class:
-            alerts = [a for a in alerts if a.event_class.value == event_class.upper()]
-        return alerts
-
-    query: dict[str, str] = {}
-    if asset_id:
-        query["asset_id"] = asset_id
-    if event_class:
-        query["event_class"] = event_class.upper()
-    cursor = db.alerts.find(query, {"_id": 0}).sort([("asset_id", ASCENDING), ("alert_time_utc", ASCENDING)])
-    return [AlertPrediction(**doc) for doc in cursor]
-
-
-def get_assets() -> list[AssetStatus]:
-    db = connect()
-    if db is None:
-        return SAMPLE_ASSETS
-    return [AssetStatus(**doc) for doc in db.assets.find({}, {"_id": 0}).sort("asset_id", ASCENDING)]
+    Loaded when the store is empty, or when the newest run is an older demo run (a rebuilt seed file replaces it).
+    A user's uploaded run is never displaced.
+    """
+    latest = store.latest()
+    if latest is not None and latest.summary.source != "seed":
+        return
+    if not seed_path.exists():
+        if latest is None:
+            log.warning("Seed run: %s not found; dashboard is empty until data is uploaded", seed_path)
+        return
+    record = AnalysisRecord.model_validate(json.loads(seed_path.read_text(encoding="utf-8")))
+    if latest is not None and latest.summary.run_id == record.summary.run_id:
+        return
+    store.save(record)
+    log.info("Seed run: loaded %s (%d pumps, %d alerts)", record.summary.run_id, record.summary.pumps,
+             record.summary.alerts)

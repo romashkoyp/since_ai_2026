@@ -1,16 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchCockpit } from "../api/client";
-import { AlertTriage } from "./AlertTriage";
 import { getDummyCockpit } from "../data/dummy";
 import {
   channelLabel,
-  confidenceLabel,
   explainFault,
   friendlyTime,
-  healthScore,
-  isMachineIssue,
   modeLabel,
-  plainStep,
   severityOf,
   systemLabel,
   timeLeftLabel,
@@ -18,6 +13,8 @@ import {
 import type { AlertPrediction, AssetStatus, CockpitMode, CockpitResponse } from "../types/alerts";
 import { HealthBar, StatusBadge } from "./FleetView";
 import { Icon } from "./Icon";
+import { IssueChecklist } from "./IssueChecklist";
+import { pumpHealth } from "../lib/issues";
 import { LoadingBlock } from "./LoadingBlock";
 import { Sparkline } from "./Sparkline";
 
@@ -142,7 +139,8 @@ export function CockpitView({
 
   const severity = asset ? severityOf(asset) : data.risk_at_100 > 0.5 ? "act_now" : "ok";
   const isHealthy = severity === "ok" && /no active/i.test(data.diagnosis);
-  const fault = explainFault(alert?.fault_type);
+  const fault = explainFault(data.fault_type ?? alert?.fault_type);
+  const health = pumpHealth(assetAlerts);
   const plainTitle = isHealthy ? "Working normally" : diagnosisPlain(data.diagnosis);
   const timeLeft = timeLeftLabel(asset?.rul_hours);
   const rulHours = asset?.rul_hours ?? null;
@@ -153,9 +151,6 @@ export function CockpitView({
   const riskProjPct = Math.round(proj.risk * 100);
   const coolingOk = data.cooling_margin_pct >= 100;
   const saving = -proj.energyDelta;
-  const machineIssues = assetAlerts.filter(
-    (a) => a.event_class === "MACHINE" && isMachineIssue(a.fault_type),
-  );
 
   return (
     <div className="pump-page">
@@ -193,7 +188,7 @@ export function CockpitView({
             <div>
               <dt>Health</dt>
               <dd>
-                <HealthBar value={healthScore(asset)} />
+                <HealthBar value={health.pct} title={`${health.passed} of ${health.total} machine issue types pass`} />
               </dd>
             </div>
           )}
@@ -252,106 +247,12 @@ export function CockpitView({
 
       {mode === "diagnose" ? (
         <div className="tab-body" role="tabpanel">
-          <AlertTriage alerts={assetAlerts} />
+          <IssueChecklist alerts={assetAlerts} />
           <section className="card diagnose-panel">
-            <div className="card-title-row">
-              <h2>Detected issues</h2>
-              <span className="progress-pill">
-                {machineIssues.length} issue{machineIssues.length === 1 ? "" : "s"}
-                {machineIssues.some((a) => a.correct != null) && (
-                  <>
-                    {" · "}
-                    {machineIssues.filter((a) => a.correct === true).length} pass
-                    {" · "}
-                    {machineIssues.filter((a) => a.correct === false).length} fail
-                  </>
-                )}
-              </span>
-            </div>
-            <p className="hint issue-legend">
-              All machine faults shown. Confidence % only on <strong>Fail</strong> rows.{" "}
-              <strong>Pass</strong> = matches ground truth · <strong>Fail</strong> = wrong label.
-            </p>
-            {machineIssues.length === 0 ? (
-              <p className="muted">No machine-fault alerts for this pump.</p>
-            ) : (
-              <div className="issue-accordion">
-                {machineIssues.map((a, i) => {
-                  const confPct = Math.round(a.confidence * 100);
-                  const verdict =
-                    a.correct === true ? "pass" : a.correct === false ? "fail" : "unknown";
-                  const key = `${a.asset_id}-${a.alert_time_utc}-${a.fault_type}-${i}`;
-                  return (
-                    <details key={key} className={`issue-acc verdict-${verdict}`}>
-                      <summary className="issue-acc-summary">
-                        <span className="issue-acc-chevron" aria-hidden />
-                        <span className="issue-acc-title">{explainFault(a.fault_type).title}</span>
-                        {verdict === "pass" && (
-                          <span className="verdict-badge pass">
-                            <Icon name="check" size={14} /> Pass
-                          </span>
-                        )}
-                        {verdict === "fail" && (
-                          <span className="verdict-badge fail">
-                            <Icon name="alert" size={14} /> Fail
-                          </span>
-                        )}
-                        {verdict === "unknown" && <span className="verdict-badge unknown">Unchecked</span>}
-                        {verdict === "fail" && (
-                          <span className="issue-acc-conf">
-                            <strong>{confPct}%</strong>
-                            <span className="issue-acc-meter" aria-hidden>
-                              <span className="bg-danger" style={{ width: `${confPct}%` }} />
-                            </span>
-                          </span>
-                        )}
-                      </summary>
-                      <div className="issue-acc-body">
-                        <dl className="issue-acc-meta">
-                          <div>
-                            <dt>Predicted</dt>
-                            <dd>{a.fault_type.replaceAll("_", " ")}</dd>
-                          </div>
-                          <div>
-                            <dt>Noticed</dt>
-                            <dd>{friendlyTime(a.alert_time_utc)}</dd>
-                          </div>
-                          {verdict === "fail" && (
-                            <div>
-                              <dt>Confidence</dt>
-                              <dd>
-                                {confidenceLabel(a.confidence)} · {confPct}%
-                              </dd>
-                            </div>
-                          )}
-                          {a.true_fault_type && (
-                            <div>
-                              <dt>True fault</dt>
-                              <dd>{a.true_fault_type.replaceAll("_", " ")}</dd>
-                            </div>
-                          )}
-                        </dl>
-                        {a.evidence && (
-                          <p className="issue-evidence">
-                            <strong>Evidence:</strong> {a.evidence}
-                          </p>
-                        )}
-                        {a.recommended_action && (
-                          <p className="issue-action">
-                            <Icon name="check" size={14} /> {plainStep(a.recommended_action)}
-                          </p>
-                        )}
-                      </div>
-                    </details>
-                  );
-                })}
-              </div>
-            )}
-
             {data.trends.length > 0 && (
               <details className="issue-section-acc">
                 <summary>Sensor trends</summary>
-                <p className="hint">Discharge head, suction pressure, and motor power. Dashed line = safe limit.</p>
+                <p className="hint">Hourly averages of the sensors behind this diagnosis. Dashed line = alarm limit.</p>
                 <div className="trend-grid">
                   {data.trends.map((series) => (
                     <Sparkline
@@ -422,8 +323,8 @@ export function CockpitView({
             ) : (
               <>
                 <p className="lead">
-                  There is a <strong className="text-danger">{riskNowPct}% chance</strong> of damage if the pump keeps
-                  running at full speed (risk at 100% from the mitigation model).
+                  The model is <strong className="text-danger">{riskNowPct}% sure</strong> this problem is real. Running
+                  at full speed keeps the damage growing.
                 </p>
                 <ol className="timeline">
                   <li className="tl-now">
@@ -520,7 +421,7 @@ export function CockpitView({
 
             <div className="cooling-bar">
               <div className="cooling-bar-head">
-                <span>Main engine HT cooling margin</span>
+                <span>Cooling margin at the lowest speed</span>
                 <strong className={coolingOk ? "text-ok" : "text-danger"}>
                   {data.cooling_margin_pct}%
                   {data.cooling_safe_flow_m3h != null && (
@@ -580,6 +481,7 @@ export function CockpitView({
                   </dd>
                 </div>
               </dl>
+              {data.sandbox_note && <p className="hint">{data.sandbox_note}</p>}
             </details>
           </section>
         </div>

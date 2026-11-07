@@ -3,11 +3,23 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field
 
 from .severity import Severity, categorize_alert
+
+
+class PumpSeverity(str, Enum):
+    """Per-pump triage level (Fleet screen colour), from the urgency of its open alerts.
+
+    Not the same as `Severity` (per-alert confidence band from severity.py, part of the shared contract).
+    """
+
+    ACT_NOW = "act_now"
+    ATTENTION = "attention"
+    SENSOR = "sensor"
+    OK = "ok"
 
 
 class EventClass(str, Enum):
@@ -50,6 +62,16 @@ class AlertPrediction(BaseModel):
         return categorize_alert(self.event_class, self.fault_type, self.confidence)
 
 
+class StoredAlert(AlertPrediction):
+    """An alert as stored with its analysis run. API alert lists still serialise as AlertPrediction."""
+
+    alert_id: str
+    decided_by: Optional[str] = None
+    rule_fault_type: Optional[str] = None
+    ml_fault_type: Optional[str] = None
+    ml_confidence: Optional[float] = None
+
+
 class AssetStatus(BaseModel):
     asset_id: str
     site: str
@@ -61,6 +83,8 @@ class AssetStatus(BaseModel):
     open_alerts: int
     fault_summary: Optional[str] = None
     rul_hours: Optional[float] = None
+    severity: Optional[PumpSeverity] = None
+    last_data_utc: Optional[str] = None
 
 
 class FleetSummary(BaseModel):
@@ -72,7 +96,10 @@ class FleetSummary(BaseModel):
     availability_pct: float
     healthy: int
     total: int
-    nuisance_suppressed_pct: float
+    nuisance_suppressed_pct: Optional[float] = None
+    run_id: Optional[str] = None
+    model_version: Optional[str] = None
+    data_end_utc: Optional[str] = None
 
 
 class TrendPoint(BaseModel):
@@ -111,6 +138,10 @@ class CockpitResponse(BaseModel):
     risk_at_88: float
     energy_delta_eur_day: float
     cooling_margin_pct: float
+    fault_type: Optional[FaultType] = None
+    rated_rpm: Optional[float] = None
+    cooling_safe_flow_m3h: Optional[float] = None
+    sandbox_note: Optional[str] = None
 
 
 class ScorecardResponse(BaseModel):
@@ -129,3 +160,44 @@ class HealthResponse(BaseModel):
     status: str
     service: str
     database: Optional[str] = None
+    model: Optional[str] = None
+
+
+class ModelInfo(BaseModel):
+    available: bool
+    model_version: Optional[str] = None
+    physics_version: Optional[str] = None
+    classes: list[str] = []
+    calibrated: Optional[bool] = None
+    reason: Optional[str] = None
+    required_datasheet_columns: list[str] = []
+    min_history_hours: Optional[float] = None
+    max_upload_mb: float
+
+
+class AnalysisRunSummary(BaseModel):
+    run_id: str
+    created_utc: str
+    source: Literal["upload", "seed"]
+    label: Optional[str] = None
+    model_version: str
+    physics_version: Optional[str] = None
+    use_ml: bool
+    pumps: int
+    alerts: int
+    ml_overrides: int
+    by_fault_type: dict[str, int]
+    data_start_utc: Optional[str] = None
+    data_end_utc: Optional[str] = None
+    processing_seconds: float
+    scored: bool = Field(default=False, description="True when ground-truth events were supplied")
+    notes: list[str] = []
+
+
+class AnalysisRecord(BaseModel):
+    """Everything one model run produced; immutable once stored."""
+
+    summary: AnalysisRunSummary
+    alerts: list[StoredAlert]
+    assets: list[AssetStatus]
+    cockpits: list[CockpitResponse]

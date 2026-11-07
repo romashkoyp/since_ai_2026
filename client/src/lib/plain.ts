@@ -1,6 +1,6 @@
-import type { AlertPrediction, AlertSeverity, AssetStatus, FaultType } from "../types/alerts";
+import type { AlertPrediction, AlertSeverity, AssetStatus, FaultType, Severity } from "../types/alerts";
 
-export type Severity = "act_now" | "attention" | "sensor" | "ok";
+export type { Severity };
 
 export interface FaultExplainer {
   title: string;
@@ -95,6 +95,15 @@ export const MACHINE_ISSUE_TYPES = [
 
 export type MachineIssueType = (typeof MACHINE_ISSUE_TYPES)[number];
 
+/** SENSOR fault types shown on Pump details (instrument / data problems). */
+export const SENSOR_ISSUE_TYPES = [
+  "SENSOR_DRIFT",
+  "SENSOR_STUCK",
+  "SENSOR_CALIBRATION_SHIFT",
+  "SENSOR_NOISE_SPIKES",
+  "COMMUNICATION_LOSS",
+] as const satisfies readonly FaultType[];
+
 export function isMachineIssue(fault: string | null | undefined): fault is MachineIssueType {
   return !!fault && (MACHINE_ISSUE_TYPES as readonly string[]).includes(fault);
 }
@@ -105,6 +114,7 @@ export function explainFault(fault: FaultType | string | null | undefined): Faul
 }
 
 export function severityOf(asset: AssetStatus): Severity {
+  if (asset.severity) return asset.severity;
   if (asset.status === "sensor_issue") return "sensor";
   if (asset.status !== "alert") return "ok";
   if (asset.rul_hours != null && asset.rul_hours <= 24) return "act_now";
@@ -140,18 +150,6 @@ export const SEVERITY_LABEL: Record<Severity, string> = {
   sensor: "Check sensor",
   ok: "Working well",
 };
-
-/**
- * Display-only estimate from status + remaining safe hours; not a model output.
- */
-export function healthScore(asset: AssetStatus): number {
-  const sev = severityOf(asset);
-  const rul = asset.rul_hours ?? 0;
-  if (sev === "act_now") return Math.round(15 + (Math.min(rul, 24) / 24) * 20);
-  if (sev === "attention") return Math.round(45 + (Math.min(rul, 96) / 96) * 25);
-  if (sev === "sensor") return 85;
-  return asset.load_pct > 85 ? 92 : 97;
-}
 
 const SYSTEMS: Record<string, string> = {
   "SW cooling": "Seawater cooling",

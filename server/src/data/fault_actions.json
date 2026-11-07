@@ -1,0 +1,115 @@
+{
+  "_how_to_use": "Look up an alarm's fault_type (from alerts.csv) here. Show plain_name as the title, what_it_means under it, the alarm's own 'evidence' text as 'Why did this happen?', and what_to_do as 'What happens next?'. urgency.level drives the colour: act_now = red, within_a_day = orange, next_planned_stop = yellow, check_sensor = blue.",
+  "BEARING_WEAR": {
+    "class": "MACHINE",
+    "plain_name": "Bearing is wearing out",
+    "what_it_means": "The ball bearing that carries the shaft is damaged. It makes small impacts every turn, which grow over days to weeks.",
+    "what_to_do": ["Plan a bearing replacement at the next stop.", "Check lubrication now (grease level, correct grease).", "Watch the bearing temperature; if it keeps rising, stop the pump and switch to the standby pump."],
+    "urgency": {"level": "next_planned_stop", "text": "Days to weeks. Becomes urgent if bearing temperature keeps rising."},
+    "not_to_confuse_with": "Cavitation also shakes the pump, but then the bearing index stays near normal and suction pressure is low."
+  },
+  "SUCTION_STRAINER_CLOGGING": {
+    "class": "MACHINE",
+    "plain_name": "Inlet filter is blocked",
+    "what_to_do": ["Switch to the standby pump if one is available.", "Inspect and clean the suction strainer.", "After cleaning, check that suction pressure is back to normal."],
+    "what_it_means": "Dirt is building up in the suction strainer, so the pump gets less water and suction pressure falls. If it continues, the water can start boiling inside the pump (cavitation).",
+    "urgency": {"level": "within_a_day", "text": "Hours to days. Act now if cavitation alarms appear on the same pump."},
+    "not_to_confuse_with": "A blocked outlet (restriction) raises discharge pressure; a blocked inlet lowers suction pressure."
+  },
+  "CAVITATION": {
+    "class": "MACHINE",
+    "plain_name": "Water is boiling inside the pump",
+    "what_it_means": "Pressure at the pump inlet is so low that the water forms vapour bubbles. When they collapse they hammer and erode the impeller.",
+    "what_to_do": ["Reduce flow or load if the process allows.", "Clean the suction strainer and check the suction valve is fully open.", "Raise the suction level (tank or basin) if possible.", "Hot water boils sooner: check the water temperature."],
+    "urgency": {"level": "act_now", "text": "Hours. Every episode damages the impeller."},
+    "not_to_confuse_with": "Bearing wear: also vibration, but the bearing index rises and suction pressure is normal."
+  },
+  "DISCHARGE_RESTRICTION": {
+    "class": "MACHINE",
+    "plain_name": "Outlet is restricted",
+    "what_it_means": "Something downstream blocks the flow: a valve left partly closed or a fouled heat exchanger. Discharge pressure goes up while flow and power go down.",
+    "what_to_do": ["Check that all discharge valves are fully open.", "Check the heat exchanger for fouling (temperature difference, pressure drop).", "Clean or open what is blocking the flow."],
+    "urgency": {"level": "within_a_day", "text": "Days. Cooling performance drops while it lasts."},
+    "not_to_confuse_with": "Inlet blockage (clogging) lowers suction pressure; an outlet restriction raises discharge pressure."
+  },
+  "MISALIGNMENT": {
+    "class": "MACHINE",
+    "plain_name": "Motor and pump shafts are not lined up",
+    "what_it_means": "The shafts of the motor and pump are not in line, so the shaft wobbles twice per turn. It often appears after maintenance and wears bearings and the coupling.",
+    "what_to_do": ["Check coupling alignment at the next planned stop (laser alignment).", "Check the foundation bolts and the coupling for wear.", "If it started right after maintenance, re-check that work first."],
+    "urgency": {"level": "next_planned_stop", "text": "Next planned stop. Sooner if vibration or bearing temperature keeps rising."},
+    "not_to_confuse_with": "Imbalance wobbles once per turn (1x); misalignment twice per turn (2x)."
+  },
+  "IMBALANCE": {
+    "class": "MACHINE",
+    "plain_name": "Rotating part is out of balance",
+    "what_it_means": "The impeller has uneven weight (fouling, a broken piece or wear), so the shaft wobbles once per turn.",
+    "what_to_do": ["Inspect the impeller for fouling or damage at the next planned stop.", "Clean or balance the impeller.", "Keep the pump running only while vibration stays below the alarm limit."],
+    "urgency": {"level": "next_planned_stop", "text": "Next planned stop, unless vibration approaches the trip limit."},
+    "not_to_confuse_with": "Misalignment wobbles twice per turn (2x) and often heats the bearing."
+  },
+  "IMPELLER_WEAR": {
+    "class": "MACHINE",
+    "plain_name": "Pump is losing strength (impeller wear)",
+    "what_it_means": "The impeller or wear rings are worn, so the pump makes less pressure than its datasheet curve says. It gets slowly worse over weeks.",
+    "what_to_do": ["Run a performance test (pressure and flow at known speed) and compare with the datasheet.", "Plan an impeller or wear-ring overhaul.", "Meanwhile, check that cooling is still sufficient."],
+    "urgency": {"level": "next_planned_stop", "text": "Weeks. Plan the overhaul."},
+    "not_to_confuse_with": "Air in the pump causes the same pressure loss, but within hours instead of weeks."
+  },
+  "AIR_ENTRAINMENT": {
+    "class": "MACHINE",
+    "plain_name": "Air is getting into the pump",
+    "what_it_means": "Air is sucked in with the water (heavy seas at the sea chest, or a low basin level), so the pump loses pressure and runs unevenly.",
+    "what_to_do": ["Vent the sea chest or suction line.", "Check the basin or tank level and raise it if low.", "In heavy weather, reduce load or switch to a lower sea chest if available."],
+    "urgency": {"level": "act_now", "text": "Hours. Air can make the pump lose suction completely."},
+    "not_to_confuse_with": "Impeller wear causes the same pressure loss, but slowly over weeks."
+  },
+  "SENSOR_DRIFT": {
+    "class": "SENSOR",
+    "plain_name": "A sensor is slowly reading wrong",
+    "what_it_means": "One sensor's reading slowly walks away from the truth while the pump itself is fine. The other sensors do not agree with it.",
+    "what_to_do": ["Check the named sensor against a reference instrument (handheld gauge or clamp meter).", "Recalibrate or replace the sensor.", "Until then, do not trust alarms based on this sensor."],
+    "urgency": {"level": "check_sensor", "text": "Check within days. The pump is not at risk, but you are partly blind."},
+    "not_to_confuse_with": "A machine fault moves several linked sensors together; a sensor fault moves only one."
+  },
+  "SENSOR_CALIBRATION_SHIFT": {
+    "class": "SENSOR",
+    "plain_name": "A sensor suddenly reads wrong",
+    "what_it_means": "One sensor's reading jumped to a new level at once (after maintenance, a knock or a power dip), while the pump itself is fine.",
+    "what_to_do": ["Check the named sensor against a reference instrument.", "Check if anyone worked on it recently.", "Recalibrate or replace it."],
+    "urgency": {"level": "check_sensor", "text": "Check within days."},
+    "not_to_confuse_with": "Drift changes slowly; a calibration shift happens in one step."
+  },
+  "SENSOR_STUCK": {
+    "class": "SENSOR",
+    "plain_name": "A sensor is frozen",
+    "what_it_means": "One sensor shows exactly the same value for a long time while the pump is running and everything else moves.",
+    "what_to_do": ["Check the sensor and its cable or wireless battery.", "Restart or replace the sensor.", "Until fixed, faults on this measurement cannot be seen."],
+    "urgency": {"level": "check_sensor", "text": "Check within a day."},
+    "not_to_confuse_with": "Communication loss: there, all data stops, not just one value."
+  },
+  "SENSOR_NOISE_SPIKES": {
+    "class": "SENSOR",
+    "plain_name": "A sensor gives noisy readings",
+    "what_it_means": "One sensor jumps up and down within each minute while the others are calm. Usually a loose cable, bad grounding or electrical interference.",
+    "what_to_do": ["Check the cable, connector and grounding of the named sensor.", "Check for nearby electrical interference (drives, welding).", "Replace the sensor if the noise stays."],
+    "urgency": {"level": "check_sensor", "text": "Check within days."},
+    "not_to_confuse_with": "Air in the pump also makes readings erratic, but on several sensors at once."
+  },
+  "COMMUNICATION_LOSS": {
+    "class": "SENSOR",
+    "plain_name": "Data stopped arriving",
+    "what_it_means": "No data came in for a while. Usually the wireless gateway, network or power supply of the data box.",
+    "what_to_do": ["Check the gateway and network connection.", "Check the battery of wireless sensors.", "Until data is back, check the pump locally."],
+    "urgency": {"level": "check_sensor", "text": "Check within hours. The pump is not watched while data is missing."},
+    "not_to_confuse_with": "A stuck sensor still sends data, just the same value."
+  },
+  "UNKNOWN": {
+    "class": "MACHINE",
+    "plain_name": "Something changed, cause unclear",
+    "what_it_means": "Measurements moved away from normal, but they do not match any known fault pattern.",
+    "what_to_do": ["Inspect the pump locally: noise, vibration, leaks, temperatures.", "Compare with the standby pump if available.", "Log what you find so the system can learn from it."],
+    "urgency": {"level": "within_a_day", "text": "Inspect within a day."},
+    "not_to_confuse_with": ""
+  }
+}
