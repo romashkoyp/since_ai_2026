@@ -4,7 +4,6 @@ import { CockpitView } from "./components/CockpitView";
 import { FleetView, StatusBadge } from "./components/FleetView";
 import { Icon } from "./components/Icon";
 import { LoadingBlock } from "./components/LoadingBlock";
-import { ScorecardView } from "./components/ScorecardView";
 import { DUMMY_ALERTS, DUMMY_ASSETS, DUMMY_SUMMARY } from "./data/dummy";
 import type {
   AlertPrediction,
@@ -27,7 +26,6 @@ export default function App() {
   const [source, setSource] = useState<Source | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [helpOpen, setHelpOpen] = useState(false);
   const hasData = useRef(false);
@@ -64,7 +62,6 @@ export default function App() {
       } finally {
         if (!ac.signal.aborted) {
           hasData.current = true;
-          setUpdatedAt(new Date());
           setInitialLoading(false);
           setRefreshing(false);
         }
@@ -99,39 +96,7 @@ export default function App() {
             </span>
           </button>
 
-          <nav className="nav" aria-label="Main">
-            <button
-              type="button"
-              className={screen === "fleet" ? "active" : ""}
-              onClick={() => setScreen("fleet")}
-            >
-              Overview
-            </button>
-            <button
-              type="button"
-              className={screen === "cockpit" ? "active" : ""}
-              onClick={() => setScreen("cockpit")}
-              disabled={!selectedAsset}
-              title={selectedAsset ? undefined : "Pick a pump on the Overview first"}
-            >
-              Pump details
-            </button>
-            <button
-              type="button"
-              className={screen === "scorecard" ? "active" : ""}
-              onClick={() => setScreen("scorecard")}
-            >
-              Savings & value
-            </button>
-          </nav>
-
           <div className="topbar-status">
-            {source && (
-              <span className={`source-pill ${source}`}>
-                <span className="dot" aria-hidden />
-                {source === "live" ? "Live data" : "Demo data"}
-              </span>
-            )}
             <div className="help-wrap">
               <button
                 type="button"
@@ -206,9 +171,6 @@ export default function App() {
             <FleetView
               summary={summary}
               assets={assets}
-              alerts={alerts}
-              updatedAt={updatedAt}
-              refreshing={refreshing}
               onDiagnose={(id) => openPump(id, "diagnose")}
               onPredict={(id) => openPump(id, "predict")}
             />
@@ -226,8 +188,6 @@ export default function App() {
             demoFallback={source === "demo"}
           />
         )}
-
-        {screen === "scorecard" && <ScorecardView demoFallback={source === "demo"} />}
       </main>
 
       <footer className="footer">
