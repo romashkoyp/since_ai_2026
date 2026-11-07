@@ -129,8 +129,10 @@ export function CockpitView({
           <div className="pump-hero-top">
             <StatusBadge severity={severity} />
             <span className="muted">
-              {data.title}
-              {asset ? ` · ${systemLabel(asset.system)} · ${asset.site}` : ""}
+              {/* title and system are often the same text: show each distinct part once */}
+              {[data.title, asset && systemLabel(asset.system), asset?.site]
+                .filter((part, i, all): part is string => !!part && all.indexOf(part) === i)
+                .join(" · ")}
             </span>
           </div>
           <h1>
