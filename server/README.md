@@ -99,6 +99,26 @@ docker build -f server/Dockerfile -t since-ai-server .
 docker run --rm -p 8000:8000 since-ai-server
 ```
 
+## Deployed behind nginx: allow uploads
+
+The VM's own nginx (in front of the containers) rejects request bodies over **1 MB by default**, which blocks
+`POST /api/analyses` with an HTML `413 Request Entity Too Large` page. On every VM whose nginx proxies `/api`
+(the frontend VM `since-ai-fe`), allow at least the API's `MAX_UPLOAD_MB` (200 MB per file, several files per
+upload) and give large raw files time to be analysed.
+
+**The deploy workflow (`.github/workflows/deploy.yml`) applies this automatically on every deploy** to each VM that
+runs nginx: it writes the file below, checks it with `nginx -t`, reloads, and removes it again if nginx rejects it
+(the deploy log then shows a warning). It needs passwordless `sudo` for the SSH user. To apply it by hand:
+
+```bash
+printf 'client_max_body_size 250m;\nproxy_read_timeout 300s;\nproxy_send_timeout 300s;\n' \
+  | sudo tee /etc/nginx/conf.d/zerofault-uploads.conf
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+(`/etc/nginx/conf.d/*.conf` is read inside nginx's `http {}` block on Ubuntu, so this applies to every site. To limit
+it to one site, put the same lines in that site's `server { }` block instead.)
+
 ## Notes
 
 - `src/data/fault_actions.json` is a copy of `joice_physics_rules/dashboard_data/fault_actions.json`

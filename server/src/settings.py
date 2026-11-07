@@ -34,7 +34,7 @@ class Settings:
 
     @property
     def max_upload_bytes(self) -> int:
-        return int(self.max_upload_mb * 1024 * 1024)
+        return int(self.max_upload_mb * 1_000_000)  # decimal MB, the same unit the dashboard shows
 
 
 @lru_cache(maxsize=1)

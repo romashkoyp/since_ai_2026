@@ -59,6 +59,21 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
+
+            # Host nginx: allow dashboard uploads (default client_max_body_size is 1 MB -> HTML 413).
+            # Applied on every deploy; rolled back automatically if nginx rejects the config.
+            if command -v nginx >/dev/null 2>&1; then
+              conf=/etc/nginx/conf.d/zerofault-uploads.conf
+              if printf 'client_max_body_size 250m;\nproxy_read_timeout 300s;\nproxy_send_timeout 300s;\n' \
+                   | sudo -n tee "$conf" >/dev/null && sudo -n nginx -t; then
+                sudo -n systemctl reload nginx && echo "nginx: uploads up to 250 MB allowed"
+              else
+                echo "WARNING: could not apply $conf (no passwordless sudo, or nginx rejected it); upload limit unchanged"
+                sudo -n rm -f "$conf" || true
+                sudo -n nginx -t >/dev/null 2>&1 && sudo -n systemctl reload nginx || true
+              fi
+            fi
+
             cd ~/since_ai_deploy/client
             # Host nginx owns :80/:443 and proxies to this container on :8080
             # (same-origin /api → backend). Leave API base empty for relative /api calls.
@@ -130,6 +145,20 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
+
+            # Host nginx (only if this VM runs one): allow dashboard uploads, same as the frontend job.
+            if command -v nginx >/dev/null 2>&1; then
+              conf=/etc/nginx/conf.d/zerofault-uploads.conf
+              if printf 'client_max_body_size 250m;\nproxy_read_timeout 300s;\nproxy_send_timeout 300s;\n' \
+                   | sudo -n tee "$conf" >/dev/null && sudo -n nginx -t; then
+                sudo -n systemctl reload nginx && echo "nginx: uploads up to 250 MB allowed"
+              else
+                echo "WARNING: could not apply $conf (no passwordless sudo, or nginx rejected it); upload limit unchanged"
+                sudo -n rm -f "$conf" || true
+                sudo -n nginx -t >/dev/null 2>&1 && sudo -n systemctl reload nginx || true
+              fi
+            fi
+
             cd ~/since_ai_deploy
             docker build -f server/Dockerfile -t since-ai-server:latest .
             docker rm -f since-ai-server || true
