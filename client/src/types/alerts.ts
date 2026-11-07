@@ -1,4 +1,4 @@
-/** Mirrors shared/contracts.schema.json AlertPrediction */
+/** Mirrors shared/contracts + operator UI payloads */
 
 export type EventClass = "MACHINE" | "SENSOR";
 
@@ -31,12 +31,80 @@ export interface AlertPrediction {
 export interface AssetStatus {
   asset_id: string;
   site: string;
+  system: string;
   tier: string;
   status: string;
+  mode: string;
+  load_pct: number;
   open_alerts: number;
+  fault_summary?: string | null;
+  rul_hours?: number | null;
+}
+
+export interface FleetSummary {
+  vessel: string;
+  watch: string;
+  critical: number;
+  actionable: number;
+  sensor_faults: number;
+  availability_pct: number;
+  healthy: number;
+  total: number;
+  nuisance_suppressed_pct: number;
+}
+
+export interface TrendPoint {
+  t: string;
+  value: number;
+}
+
+export interface TrendSeries {
+  name: string;
+  unit: string;
+  points: TrendPoint[];
+  threshold?: number | null;
+}
+
+export interface EvidenceRow {
+  channel: string;
+  sigma: number;
+  note: string;
+}
+
+export interface CockpitResponse {
+  asset_id: string;
+  title: string;
+  diagnosis: string;
+  event_class: EventClass;
+  confidence: number;
+  safe_window: string;
+  evidence: EvidenceRow[];
+  sop: string[];
+  trends: TrendSeries[];
+  sandbox_default_speed_pct: number;
+  npsh_at_100: number;
+  npsh_at_88: number;
+  risk_at_100: number;
+  risk_at_88: number;
+  energy_delta_eur_day: number;
+  cooling_margin_pct: number;
+}
+
+export interface ScorecardResponse {
+  composite_score: number;
+  event_f1: number;
+  precision: number;
+  fault_type_recall: number;
+  timeliness: number;
+  false_alarms: number;
+  t0_vs_t1: { capability: string; t0: string; t1: string }[];
+  hardware_bom: { item: string; eur: number }[];
+  economics: { metric: string; value: string }[];
 }
 
 export interface HealthResponse {
   status: string;
   service: string;
 }
+
+export type ScreenId = "fleet" | "cockpit" | "scorecard";
