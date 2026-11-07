@@ -58,7 +58,7 @@ server/src/
 ├── models.py         Pydantic request/response models
 ├── sample_data.py    static retrofit scorecard
 └── routers/
-    ├── dashboard.py  /api/alerts, /api/assets, /api/fleet/summary, /api/cockpit, /api/scorecard, /api/model
+    ├── dashboard.py  /api/alerts, /api/assets, /api/fleet/summary, /api/cockpit, /api/fault-guide, /api/scorecard, /api/model
     └── analyses.py   /api/analyses (upload + run list + CSV export)
 ```
 
@@ -74,6 +74,7 @@ server/src/
 | GET | `/api/alerts` | Fleet + Pump screens | Alerts of the latest run (filterable) |
 | GET | `/api/alerts/{asset_id}` | — | Alerts of one pump (404 if none) |
 | GET | `/api/cockpit/{asset_id}` | Pump screen | Diagnosis, evidence, steps, trends, sandbox |
+| GET | `/api/fault-guide` | Pump screen ("What happens next?") | What each fault means, how urgent, what to do |
 | GET | `/api/scorecard` | Scorecard screen | Retrofit business case (static) |
 | GET | `/api/model` | Upload dialog | Model version, required columns, upload limit |
 | POST | `/api/analyses` | Upload dialog | Upload files → run model → new latest run |
@@ -256,6 +257,32 @@ Everything the Pump page needs. **404** for an unknown pump.
 | `evidence` | channel z-scores parsed from the alert's evidence text (`sigma` = deviations from the pump's own normal) |
 | `trends` | up to 3 series: the channels named in the evidence first, then defaults (vibration/bearing for mechanical faults, pressures/flow/power for hydraulic ones). Hourly means, ≤ 168 points. `threshold` = datasheet `vibration_alarm_mm_s` for vibration RMS. |
 | sandbox fields | see §7 |
+
+---
+
+### `GET /api/fault-guide`
+
+Plain-language guidance for all 14 fault types, from `src/data/fault_actions.json` (copy of
+`joice_physics_rules/dashboard_data/fault_actions.json`). The pump page's **"What happens next?"** tab shows one card
+per issue that failed on the pump, most urgent first.
+
+```json
+[
+  {
+    "fault_type": "BEARING_WEAR",
+    "event_class": "MACHINE",
+    "plain_name": "Bearing is wearing out",
+    "what_it_means": "The ball bearing that carries the shaft is damaged. …",
+    "what_to_do": ["Plan a bearing replacement at the next stop.", "Check lubrication now (grease level, correct grease).", "…"],
+    "urgency_level": "next_planned_stop",
+    "urgency_text": "Days to weeks. Becomes urgent if bearing temperature keeps rising.",
+    "not_to_confuse_with": "Cavitation also shakes the pump, but then the bearing index stays near normal …"
+  }
+]
+```
+
+`urgency_level` colours (as defined in the file): `act_now` red · `within_a_day` orange · `next_planned_stop`
+yellow · `check_sensor` blue.
 
 ---
 

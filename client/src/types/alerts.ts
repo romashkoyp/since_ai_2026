@@ -168,6 +168,20 @@ export interface AnalysisRun {
   notes: string[];
 }
 
+export type UrgencyLevel = "act_now" | "within_a_day" | "next_planned_stop" | "check_sensor";
+
+/** What a fault means and what to do (server: GET /api/fault-guide, from fault_actions.json) */
+export interface FaultGuideEntry {
+  fault_type: FaultType;
+  event_class: EventClass;
+  plain_name: string;
+  what_it_means: string;
+  what_to_do: string[];
+  urgency_level: UrgencyLevel;
+  urgency_text: string;
+  not_to_confuse_with?: string | null;
+}
+
 export type AnalysisFileField = "datasheet" | "telemetry" | "baseline" | "context" | "snapshots" | "events";
 
 export type ScreenId = "fleet" | "cockpit" | "scorecard";

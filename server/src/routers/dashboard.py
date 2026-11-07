@@ -11,11 +11,13 @@ from .. import engine
 from ..analysis import fleet_summary
 from ..db import RunStore
 from ..deps import get_store, settings_dep
+from ..fault_guide import all_guides
 from ..models import (
     AlertPrediction,
     AssetStatus,
     CockpitResponse,
     EventClass,
+    FaultGuideEntry,
     FleetSummary,
     ModelInfo,
     ScorecardResponse,
@@ -74,6 +76,18 @@ def get_cockpit(asset_id: str, store: Store) -> CockpitResponse:
     if cockpit is None:
         raise HTTPException(status_code=404, detail=f"Unknown asset {asset_id}")
     return cockpit
+
+
+@router.get("/fault-guide", response_model=list[FaultGuideEntry], summary="What each fault means and what to do")
+def get_fault_guide() -> list[FaultGuideEntry]:
+    """Plain-language guidance for all 14 fault types (fault_actions.json): meaning, urgency and steps."""
+    return [
+        FaultGuideEntry(fault_type=g.fault_type, event_class=g.event_class, plain_name=g.plain_name,
+                        what_it_means=g.what_it_means, what_to_do=list(g.what_to_do),
+                        urgency_level=g.urgency_level, urgency_text=g.urgency_text,
+                        not_to_confuse_with=g.not_to_confuse_with)
+        for g in all_guides()
+    ]
 
 
 @router.get("/scorecard", response_model=ScorecardResponse, summary="Retrofit business case (static)")

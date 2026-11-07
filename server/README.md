@@ -46,6 +46,7 @@ Full guide with request/response examples, error codes and the severity and sand
 | GET | `/api/alerts?asset_id=&event_class=&severity=` | alerts of the latest run (`shared/contracts.schema.json` shape); repeat `severity` for triage, e.g. `?severity=SEVERE&severity=MODERATE` |
 | GET | `/api/alerts/{asset_id}?severity=` | alerts for one pump (404 if none) |
 | GET | `/api/cockpit/{asset_id}` | diagnosis, evidence, SOP, sensor trends, mitigation sandbox |
+| GET | `/api/fault-guide` | what each of the 14 fault types means, urgency and steps (`src/data/fault_actions.json`) |
 | GET | `/api/scorecard` | retrofit business case (static) |
 | GET | `/api/model` | installed model, required datasheet columns, upload limit |
 | POST | `/api/analyses` | multipart upload → run the model → `201` run summary |

@@ -175,6 +175,19 @@ class ModelInfo(BaseModel):
     max_upload_mb: float
 
 
+class FaultGuideEntry(BaseModel):
+    """What a fault means and what to do about it (from fault_actions.json)."""
+
+    fault_type: str
+    event_class: EventClass
+    plain_name: str
+    what_it_means: str
+    what_to_do: list[str]
+    urgency_level: Literal["act_now", "within_a_day", "next_planned_stop", "check_sensor"]
+    urgency_text: str
+    not_to_confuse_with: Optional[str] = None
+
+
 class AnalysisRunSummary(BaseModel):
     run_id: str
     created_utc: str

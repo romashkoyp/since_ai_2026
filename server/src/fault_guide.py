@@ -26,11 +26,13 @@ _URGENCY_RANK = {"act_now": 0, "within_a_day": 1, "next_planned_stop": 2, "check
 @dataclass(frozen=True)
 class FaultGuide:
     fault_type: str
+    event_class: str
     plain_name: str
     what_it_means: str
     what_to_do: tuple[str, ...]
     urgency_level: str
     urgency_text: str
+    not_to_confuse_with: str | None = None
 
     @property
     def severity(self) -> PumpSeverity:
@@ -51,13 +53,19 @@ def _load() -> dict[str, FaultGuide]:
         urgency = g.get("urgency", {})
         out[fault_type] = FaultGuide(
             fault_type=fault_type,
+            event_class=g.get("class", "MACHINE"),
             plain_name=g["plain_name"],
             what_it_means=g.get("what_it_means", ""),
             what_to_do=tuple(g.get("what_to_do", [])),
             urgency_level=urgency.get("level", "within_a_day"),
             urgency_text=urgency.get("text", ""),
+            not_to_confuse_with=g.get("not_to_confuse_with") or None,
         )
     return out
+
+
+def all_guides() -> list[FaultGuide]:
+    return list(_load().values())
 
 
 def guide_for(fault_type: str) -> FaultGuide:

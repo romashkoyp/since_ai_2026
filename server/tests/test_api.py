@@ -71,6 +71,18 @@ def test_alerts_csv_uses_template_columns(client):
     assert client.get("/api/analyses/unknown/alerts.csv").status_code == 404
 
 
+def test_fault_guide_covers_every_fault_type(client):
+    from src.models import FaultType
+
+    guide = {g["fault_type"]: g for g in client.get("/api/fault-guide").json()}
+    assert set(guide) == {f.value for f in FaultType}
+    for g in guide.values():
+        assert g["plain_name"] and g["what_to_do"], g["fault_type"]
+        assert g["urgency_level"] in {"act_now", "within_a_day", "next_planned_stop", "check_sensor"}
+    assert guide["CAVITATION"]["urgency_level"] == "act_now"
+    assert guide["SENSOR_STUCK"]["event_class"] == "SENSOR"
+
+
 def test_model_info(client):
     info = client.get("/api/model").json()
     assert info["available"] is True
