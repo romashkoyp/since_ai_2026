@@ -2215,3 +2215,129 @@ p {
 .next-steps-empty p {
   margin: 0.2rem 0 0;
 }
+
+/* ---------- Responsive fixes (phone 360 px → desktop) ---------- */
+
+/* Fleet: search + "Download CSV" wrap instead of pushing past the screen edge */
+.section-actions {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.section-actions .search {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+/* Legends with inline <strong>: normal text flow, not one flex item per word group */
+.issue-legend,
+.analysis-head .hint,
+.next-step-confuse {
+  display: block;
+}
+
+.next-step-confuse svg,
+.next-step-when svg {
+  flex-shrink: 0;
+  vertical-align: -2px;
+}
+
+/* Detected issues rows: fixed grid so every row lines up */
+.issue-acc-summary {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "chev badge title occ check";
+}
+
+.issue-acc-summary > .issue-acc-chevron { grid-area: chev; }
+.issue-acc-summary > .health-badge { grid-area: badge; }
+.issue-acc-summary > .issue-acc-title { grid-area: title; }
+.issue-acc-summary > .issue-occ { grid-area: occ; justify-self: end; }
+.issue-acc-summary > .verdict-badge { grid-area: check; justify-self: end; }
+
+/* Upload dialog: fields shrink with the dialog */
+.analysis-dialog {
+  overflow-x: hidden;
+}
+
+.file-grid > *,
+.file-field {
+  min-width: 0;
+}
+
+.file-field input[type="file"] {
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  /* issue rows: line 1 = chevron · Fail/Pass · name, line 2 = how often / % · model check */
+  .issue-acc-summary {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "chev badge title title"
+      ".    occ   occ   check";
+    row-gap: 0.4rem;
+  }
+
+  .issue-acc-summary > .issue-occ {
+    justify-self: start;
+  }
+
+  .issue-acc-title {
+    white-space: normal;
+  }
+
+  .issue-acc-body {
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+  }
+
+  .occ-list {
+    padding-left: 1rem;
+  }
+
+  /* What happens next: urgency chip above the title instead of squeezing it */
+  .next-step-head {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .next-step-head .urgency-chip {
+    order: -1;
+  }
+
+  /* Upload dialog uses almost the full phone screen */
+  .analysis-dialog {
+    width: calc(100vw - 1rem);
+    max-height: calc(100dvh - 1rem);
+  }
+
+  .analysis-form {
+    padding: 1rem;
+  }
+
+  .analysis-actions .btn {
+    flex: 1 1 auto;
+  }
+}
+
+/* Smallest phones (320 px): nothing inside the pump cards may demand a fixed minimum width */
+.trend-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+}
+
+.tech dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .tech dl div {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+}
+
+.issue-occ {
+  white-space: nowrap;
+}
