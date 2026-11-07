@@ -5,7 +5,6 @@ import {
   channelLabel,
   explainFault,
   friendlyTime,
-  modeLabel,
   severityOf,
   systemLabel,
   timeLeftLabel,
@@ -149,15 +148,6 @@ export function CockpitView({
               <dt>Health</dt>
               <dd>
                 <HealthBar value={health.pct} title={`${health.passed} of ${health.total} machine issue types pass`} />
-              </dd>
-            </div>
-          )}
-          {asset && (
-            <div>
-              <dt>Status</dt>
-              <dd>
-                {modeLabel(asset.mode)}
-                {asset.mode === "RUNNING" ? ` at ${Math.round(asset.load_pct)}% power` : ""}
               </dd>
             </div>
           )}
