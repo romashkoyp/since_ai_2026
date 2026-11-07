@@ -34,7 +34,23 @@ jobs:
         github.event.workflow_run.conclusion == 'success'
       )
     steps:
-      - name: Deploy client over SSH
+      - name: Checkout code on runner
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Upload client to FE VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.OCI_FE_HOST }}
+          username: ${{ secrets.OCI_SSH_USER }}
+          key: ${{ secrets.OCI_FE_SSH_PRIVATE_KEY }}
+          source: "client"
+          target: "since_ai_deploy"
+          overwrite: true
+          rm: true
+
+      - name: Build and run client container
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.OCI_FE_HOST }}
@@ -43,15 +59,7 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
-            REPO_DIR="${HOME}/since_ai_2026"
-            if [ ! -d "$REPO_DIR/.git" ]; then
-              git clone https://github.com/romashkoyp/since_ai_2026.git "$REPO_DIR"
-            fi
-            cd "$REPO_DIR"
-            git fetch origin
-            git checkout main
-            git pull --ff-only origin main
-            cd client
+            cd ~/since_ai_deploy/client
             docker build \
               --build-arg "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" \
               -t since-ai-client:latest .
@@ -62,6 +70,7 @@ jobs:
               -p 80:80 \
               since-ai-client:latest
             docker image prune -f
+            curl -sf http://127.0.0.1/ >/dev/null || true
 
   deploy-backend:
     name: Deploy backend VM
@@ -75,7 +84,23 @@ jobs:
         github.event.workflow_run.conclusion == 'success'
       )
     steps:
-      - name: Deploy server over SSH
+      - name: Checkout code on runner
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Upload server to BE VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.OCI_BE_HOST }}
+          username: ${{ secrets.OCI_SSH_USER }}
+          key: ${{ secrets.OCI_BE_SSH_PRIVATE_KEY }}
+          source: "server"
+          target: "since_ai_deploy"
+          overwrite: true
+          rm: true
+
+      - name: Build and run server container
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.OCI_BE_HOST }}
@@ -84,15 +109,7 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
-            REPO_DIR="${HOME}/since_ai_2026"
-            if [ ! -d "$REPO_DIR/.git" ]; then
-              git clone https://github.com/romashkoyp/since_ai_2026.git "$REPO_DIR"
-            fi
-            cd "$REPO_DIR"
-            git fetch origin
-            git checkout main
-            git pull --ff-only origin main
-            cd server
+            cd ~/since_ai_deploy/server
             docker build -t since-ai-server:latest .
             docker rm -f since-ai-server || true
             docker run -d \
@@ -103,3 +120,5 @@ jobs:
               -e "MONGODB_URI=${{ secrets.MONGODB_URI }}" \
               since-ai-server:latest
             docker image prune -f
+            sleep 2
+            curl -sf http://127.0.0.1:8000/health

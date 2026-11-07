@@ -13,9 +13,12 @@ CI workflow (.github/workflows/ci.yml)
    │
    ▼ (only if CI succeeds)
 Deploy OCI (.github/workflows/deploy.yml)
-  - SSH → FE VM → git pull + docker rebuild client
-  - SSH → BE VM → git pull + docker rebuild server
+  - Actions runner checks out the repo (uses GitHub auth)
+  - SCP `client/` / `server/` to the VMs (no git clone on the VM)
+  - SSH → docker build + run
 ```
+
+> Private repos cannot `git clone` on the VM without a PAT/deploy key. This workflow avoids that by copying files from the runner.
 
 You can also run **Actions → Deploy OCI → Run workflow** manually.
 
