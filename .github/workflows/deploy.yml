@@ -120,5 +120,23 @@ jobs:
               -e "MONGODB_URI=${{ secrets.MONGODB_URI }}" \
               since-ai-server:latest
             docker image prune -f
-            sleep 2
-            curl -sf http://127.0.0.1:8000/health
+
+            echo "Waiting for API health..."
+            ok=0
+            for i in $(seq 1 30); do
+              if curl -sf --max-time 2 http://127.0.0.1:8000/health; then
+                echo
+                echo "Health OK"
+                ok=1
+                break
+              fi
+              echo "attempt $i/30 failed; container status:"
+              docker ps -a --filter name=since-ai-server --format '{{.Status}}' || true
+              sleep 2
+            done
+
+            if [ "$ok" -ne 1 ]; then
+              echo "Health check failed. Logs:"
+              docker logs since-ai-server --tail 100 || true
+              exit 1
+            fi
