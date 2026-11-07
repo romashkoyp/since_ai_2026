@@ -1,0 +1,4 @@
+asset_id,split,site,system,profile,control,instrumentation_tier,pump_rated_flow_m3_h,pump_rated_head_m,motor_rated_kw,motor_rated_rpm,fluid,window_start_utc,window_end_utc
+PUMP-10,test,"Vessel C (RoPax, fictional)","Seawater cooling, pump No. 1",SHIP_SW_COOLING,VFD_TEMPERATURE,T1_RETROFIT,450,27,45,1780,"Seawater (brackish, ~6 PSU)",2025-07-21T00:00:00Z,2025-07-28T00:00:00Z
+PUMP-11,test,"Plant E (paper converting, fictional)",Cooling-water circulation pump CW-11,INDUSTRIAL_CW,VFD_PRESSURE,T0_LEGACY,400,30,55,1485,Cooling-tower water,2026-04-20T00:00:00Z,2026-04-27T00:00:00Z
+PUMP-12,test,"Plant D (chemical process, fictional)",Hot process-water transfer pump PT-3,PROCESS_TRANSFER,FLOW_VALVE,T2_FULL,52,46,11,2935,Hot process water,2025-11-24T00:00:00Z,2025-12-01T00:00:00Z

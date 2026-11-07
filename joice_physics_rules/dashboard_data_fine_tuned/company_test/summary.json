@@ -1,0 +1,20 @@
+{
+  "source": "company test (unlabeled)",
+  "pumps": 3,
+  "alerts": 33,
+  "alerts_by_asset": {
+    "PUMP-10": 6,
+    "PUMP-11": 6,
+    "PUMP-12": 21
+  },
+  "physics_columns": {
+    "head_factor": "head_factor (1.0 = on pump curve)",
+    "head_change_vs_normal": "head_change_vs_normal",
+    "power_change_vs_normal": "power_change_vs_normal",
+    "npsh_margin": "npsh_margin (<1.15 = cavitation)",
+    "bearing_index": "bearing_index (~0.1 healthy, >0.6 damaged)",
+    "current_vs_power_error": "current_vs_power_error",
+    "bearing_temp_above_normal_C": "bearing_temp_above_normal_C",
+    "minutes_since_start": "minutes_since_start"
+  }
+}
