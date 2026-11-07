@@ -24,8 +24,24 @@ export class ApiError extends Error {
   }
 }
 
+/** Readable text for error pages produced by a proxy in front of the API (e.g. nginx HTML pages) */
+function proxyMessage(status: number, statusText: string): string {
+  if (status === 413) {
+    return (
+      "The upload is too large for the web server in front of the API (nginx client_max_body_size). " +
+      "Ask the administrator to raise that limit, or upload smaller files."
+    );
+  }
+  if (status === 502 || status === 503 || status === 504) {
+    return "The API is not reachable or took too long to answer. Try again in a moment.";
+  }
+  return `${status} ${statusText}`.trim();
+}
+
 async function errorFrom(res: Response): Promise<ApiError> {
   const body = await res.text();
+  const isHtml = (res.headers.get("content-type") ?? "").includes("text/html") || /^\s*</.test(body);
+  if (isHtml) return new ApiError(res.status, proxyMessage(res.status, res.statusText));
   let detail = body;
   try {
     const parsed = JSON.parse(body) as { detail?: unknown };
