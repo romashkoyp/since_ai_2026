@@ -35,6 +35,15 @@ def test_fleet_assets_and_cockpits_are_consistent(client):
             assert body["fault_type"] and a["open_alerts"] > 0
 
 
+def test_pump_status_agrees_with_its_alerts(client):
+    """A pump tile says 'ok' only when the pump has no alerts at all in the run (same data as Detected issues)."""
+    alerts = client.get("/api/alerts").json()
+    for a in client.get("/api/assets").json():
+        n = sum(1 for x in alerts if x["asset_id"] == a["asset_id"])
+        assert (a["severity"] == "ok") == (n == 0), (a["asset_id"], a["severity"], n)
+        assert a["open_alerts"] == n
+
+
 def test_alerts_follow_the_shared_contract(client):
     alerts = client.get("/api/alerts").json()
     assert alerts

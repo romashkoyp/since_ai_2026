@@ -38,7 +38,7 @@ Key ideas:
 | **Run** | One model execution over one set of uploaded files. Has a `run_id`. Never changed after it is saved. |
 | **Latest run** | All dashboard endpoints read the most recent run. A new upload instantly becomes what everyone sees. |
 | **Seed run** | On startup, if the store is empty, `server/seed/demo_run.json` is loaded so the dashboard is never blank. |
-| **Open alert** | An alert raised within `ACTIVE_ALERT_HOURS` (default 48 h) before the pump's last reading. Drives the pump's status. |
+| **Open alert** | Any alert of the pump in the analysed period (same alerts as the "Detected issues" card). Optionally limited by `ACTIVE_ALERT_HOURS`. Drives the pump's status. |
 | **Severity** | `act_now` · `attention` · `sensor` · `ok` — from the urgency of the pump's most severe open alert. |
 
 ---
@@ -160,7 +160,7 @@ How each field is filled:
 | `tier` | `T0` / `T1` / `T2` from the datasheet or the sensors present in the telemetry |
 | `mode` | most common `operating_mode` in the pump's last 15 minutes |
 | `load_pct` | power / rated kW → else current / rated A → else speed / rated rpm (0 when not running) |
-| `open_alerts` | alerts within `ACTIVE_ALERT_HOURS` of `last_data_utc` |
+| `open_alerts` | the pump's alerts in the analysed period (or within `ACTIVE_ALERT_HOURS` of `last_data_utc` when set) |
 | `severity` | urgency of the most severe open alert (see §6); `ok` when none |
 | `status` | `alert` (act_now / attention) · `sensor_issue` (sensor) · `healthy` (ok) — kept for older UI code |
 | `fault_summary` | plain name of the most severe open alert |
@@ -252,7 +252,7 @@ Everything the Pump page needs. **404** for an unknown pump.
 
 | Part | How it is built |
 |---|---|
-| `diagnosis`, `fault_type` | the most severe open alert (most recent when tied); `"No active fault"` when none |
+| `diagnosis`, `fault_type` | the most severe open alert (a known fault beats UNKNOWN, then most recent); `"No active fault"` when none |
 | `safe_window`, `sop` | urgency text and steps from `fault_guide` for that fault |
 | `evidence` | channel z-scores parsed from the alert's evidence text (`sigma` = deviations from the pump's own normal) |
 | `trends` | up to 3 series: the channels named in the evidence first, then defaults (vibration/bearing for mechanical faults, pressures/flow/power for hydraulic ones). Hourly means, ≤ 168 points. `threshold` = datasheet `vibration_alarm_mm_s` for vibration RMS. |
@@ -466,7 +466,7 @@ On startup, if there is no run yet, the seed run (`SEED_RUN_PATH`) is saved. Reb
 | `MONGODB_URI`, `MONGODB_DB` | empty, `since_ai` | Atlas connection |
 | `CORS_ORIGINS` | localhost + VM IP | comma-separated allowed origins |
 | `MAX_UPLOAD_MB` | 200 | per uploaded file (the host nginx `client_max_body_size` must allow it too) |
-| `ACTIVE_ALERT_HOURS` | 48 | window for "open" alerts |
+| `ACTIVE_ALERT_HOURS` | empty | empty = whole analysed period; a number = only alerts that many hours before the last reading |
 | `ENERGY_PRICE_EUR_KWH` | 0.15 | sandbox energy cost |
 | `COOLING_MIN_FLOW_FRACTION` | 0.8 | sandbox cooling requirement |
 | `SEED_RUN_PATH` | `seed/demo_run.json` | demo run for an empty store |

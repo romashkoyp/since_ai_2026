@@ -73,7 +73,7 @@ table (`asset_id, fault_type, onset_utc, end_utc`); when given, each alert gets 
 | `MONGODB_URI`, `MONGODB_DB` | empty, `since_ai` | Atlas connection; empty = in-memory runs |
 | `CORS_ORIGINS` | localhost + VM | comma-separated |
 | `MAX_UPLOAD_MB` | 200 | per uploaded file |
-| `ACTIVE_ALERT_HOURS` | 48 | an alert is "open" if raised this long before the pump's last reading |
+| `ACTIVE_ALERT_HOURS` | empty | empty = a pump's status uses every alert in the analysed period (matches "Detected issues"); a number = only alerts raised that many hours before its last reading |
 | `ENERGY_PRICE_EUR_KWH` | 0.15 | sandbox energy saving |
 | `COOLING_MIN_FLOW_FRACTION` | 0.8 | share of today's flow the cooled system needs (sandbox cooling margin) |
 | `SEED_RUN_PATH` | `seed/demo_run.json` | run loaded into an empty store |
