@@ -17,7 +17,7 @@ export interface IssueRow {
   alerts: AlertPrediction[];
 }
 
-const label = (fault: string) => (fault === "NO_FAULT" ? "no fault (false alarm)" : fault.replaceAll("_", " ").toLowerCase());
+const label = (fault: string) => (fault === "NO_FAULT" ? "no fault, a false alarm" : fault.replaceAll("_", " ").toLowerCase());
 
 function maxBy(alerts: AlertPrediction[]): AlertPrediction {
   return alerts.reduce((best, a) => (a.confidence > best.confidence ? a : best));
@@ -25,10 +25,10 @@ function maxBy(alerts: AlertPrediction[]): AlertPrediction {
 
 /**
  * Pass / Fail per issue type, from the alerts' ground truth (`correct`, `true_fault_type`):
- * - the real fault of this type was flagged correctly -> Pass (wrong extra alerts are mentioned)
- * - only flagged when the real fault was different    -> Fail (confidence of that wrong call)
- * - real fault of this type labelled as something else -> Fail (confidence of the wrong label)
- * - not flagged and not present                       -> Pass
+ * - any alert flagged this type while the real fault was different -> Fail (confidence of that wrong call)
+ * - a real fault of this type was labelled as something else      -> Fail (confidence of the wrong label)
+ * - flagged, and every alert right                                -> Pass
+ * - not flagged and not present                                   -> Pass
  * Without ground truth (an upload with no known-faults file) rows are "unchecked".
  */
 export function machineIssueRows(alerts: AlertPrediction[]): IssueRow[] {
@@ -54,20 +54,7 @@ export function machineIssueRows(alerts: AlertPrediction[]): IssueRow[] {
     const hits = flagged.filter((a) => a.correct === true);
     const wrong = flagged.filter((a) => a.correct === false);
     const missed = alerts.filter((a) => a.true_fault_type === type && a.fault_type !== type);
-
-    if (hits.length) {
-      const extras = wrong.length + missed.length;
-      return {
-        type,
-        verdict: "pass",
-        detected,
-        failConfidence: null,
-        reason:
-          `Detected correctly (${hits.length} alert${hits.length === 1 ? "" : "s"}).` +
-          (extras ? ` ${extras} other alert${extras === 1 ? " was" : "s were"} labelled wrongly around it.` : ""),
-        alerts: flagged,
-      };
-    }
+    const right = hits.length ? ` (${hits.length} other alert${hits.length === 1 ? " was" : "s were"} right)` : "";
 
     if (wrong.length) {
       const worst = maxBy(wrong);
@@ -76,7 +63,9 @@ export function machineIssueRows(alerts: AlertPrediction[]): IssueRow[] {
         verdict: "fail",
         detected,
         failConfidence: worst.confidence,
-        reason: `Flagged, but the real fault was ${label(worst.true_fault_type ?? "NO_FAULT")}.`,
+        reason:
+          `${wrong.length} alert${wrong.length === 1 ? "" : "s"} flagged this, but the real fault was ` +
+          `${label(worst.true_fault_type ?? "NO_FAULT")}${right}.`,
         alerts: flagged,
       };
     }
@@ -88,8 +77,8 @@ export function machineIssueRows(alerts: AlertPrediction[]): IssueRow[] {
         verdict: "fail",
         detected,
         failConfidence: worst.confidence,
-        reason: `This fault was really present, but the model called it ${label(worst.fault_type)}.`,
-        alerts: missed,
+        reason: `This fault was really present, but the model called it ${label(worst.fault_type)}${right}.`,
+        alerts: [...flagged, ...missed],
       };
     }
 
@@ -98,7 +87,9 @@ export function machineIssueRows(alerts: AlertPrediction[]): IssueRow[] {
       verdict: "pass",
       detected,
       failConfidence: null,
-      reason: "Not present on this pump, and correctly not flagged.",
+      reason: detected
+        ? `Detected correctly (${hits.length} alert${hits.length === 1 ? "" : "s"}).`
+        : "Not present on this pump, and correctly not flagged.",
       alerts: flagged,
     };
   });

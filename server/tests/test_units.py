@@ -42,17 +42,24 @@ def test_ground_truth_labelling():
     assert (false_alarm.true_fault_type, false_alarm.correct) == ("NO_FAULT", False)
 
 
-def test_ground_truth_prefers_the_matching_fault_when_faults_overlap():
-    bearing = _alert("BEARING_WEAR", "2026-01-03T12:00:00Z")
-    comm = _alert("COMMUNICATION_LOSS", "2026-01-03T12:30:00Z", cls="SENSOR")
+def test_ground_truth_uses_the_team_labelling_rule():
+    """Same as joice_physics_rules/build_training_table.py true_label: -30 min .. +2 h, latest onset wins."""
     events = pd.DataFrame([
         {"asset_id": "P1", "fault_type": "BEARING_WEAR", "onset_utc": "2026-01-01T00:00:00Z", "end_utc": None},
         {"asset_id": "P1", "fault_type": "COMMUNICATION_LOSS", "onset_utc": "2026-01-03T11:00:00Z",
          "end_utc": "2026-01-03T13:00:00Z"},
+        {"asset_id": "P1", "fault_type": "CAVITATION", "onset_utc": "2026-01-05T10:00:00Z",
+         "end_utc": "2026-01-05T12:00:00Z"},
     ])
-    _label_alerts([bearing, comm], events)
-    assert (bearing.true_fault_type, bearing.correct) == ("BEARING_WEAR", True)
-    assert (comm.true_fault_type, comm.correct) == ("COMMUNICATION_LOSS", True)
+    during_outage = _alert("BEARING_WEAR", "2026-01-03T12:00:00Z")   # comm loss started later -> it wins
+    after_outage = _alert("BEARING_WEAR", "2026-01-03T15:30:00Z")    # >2 h after comm loss -> bearing again
+    early = _alert("CAVITATION", "2026-01-05T09:40:00Z")             # within 30 min before onset
+    late = _alert("CAVITATION", "2026-01-05T14:30:00Z")              # >2 h after end -> bearing (open-ended)
+    _label_alerts([during_outage, after_outage, early, late], events)
+    assert (during_outage.true_fault_type, during_outage.correct) == ("COMMUNICATION_LOSS", False)
+    assert (after_outage.true_fault_type, after_outage.correct) == ("BEARING_WEAR", True)
+    assert (early.true_fault_type, early.correct) == ("CAVITATION", True)
+    assert (late.true_fault_type, late.correct) == ("BEARING_WEAR", False)
 
 
 def test_extra_pumps_in_optional_files_are_dropped_with_a_note():
