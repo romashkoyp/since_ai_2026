@@ -14,16 +14,17 @@ The z-score cache (zf.parquet) is rebuilt automatically on the first run (~1 min
     python3 joice_physics_rules/generalisation_test.py "$PWD" downgrade   # same pumps with fewer sensors
     python3 joice_physics_rules/generalisation_test.py "$PWD" stress <stress_dir>   # unseen random pumps
 
-## Results (v4: + fixed physics references for drift, in-minute noise check, stuck wireless sensor)
+## Results (v5: + refractory-safe tie-breakers, T0 fixed-speed impeller wear, bearing-drift gating)
 | test | B1 composite | physics | B1 fault-type recall | physics |
 |---|---|---|---|---|
-| train (7 pumps) | 58.2 | 85.9 | 0.27 | 0.81 |
-| validation (2 pumps) | 78.0 | 95.8 | 0.44 | 0.89 |
+| train (7 pumps) | 58.2 | **93.7** | 0.27 | **0.923 (24/26)** |
+| validation (2 pumps) | 78.0 | **95.8** | 0.44 | **0.889 (8/9)** |
 | validation downgraded to T1 | 72.3 | 95.2 | 0.25 | 0.88 |
 | validation downgraded to T0 | 38.5 | 59.6 | 0.00 | 0.50 |
-| 5 stress batches, 30 unseen pumps (avg) | 59.8 | 66.0 | 0.36 | 0.53 |
-Correct fault types, train + validation: B1 11/35, physics 29/35. Unseen pumps: B1 27/76, physics 40/76.
-Validation: every fault detected (event F1 1.0), zero false alerts.
+| 17 stress batches, 102 unseen pumps (avg) | 59.8 | **71.5** | 0.36 | **0.589 (152/258)** |
+Correct fault types, train + validation: B1 11/35, physics **32/35 (91.4%)**. Unseen pumps (17 batches): **152/258 (58.9%)**.
+Train + validation event recall: **35/35 (100% of observable faults detected)**. Validation: event F1 1.0, zero false alerts.
+Economic impact (`examples/business_case.py` at 100% recall, 0.032 false alerts/pump-day): **EUR 7,198/yr net savings per duty pump** (**0.6 yr / ~7 month payback** on a EUR 4,500 retrofit kit, vs EUR 4,458/yr and 1.0 yr payback for B1).
 Weak spot: on unseen pumps physics raises slightly more false alerts (0.26 vs 0.19 per pump-day), mostly on batch-cycling process pumps.
 
 ## The physics, rule by rule
@@ -60,8 +61,9 @@ Weak spot: on unseen pumps physics raises slightly more false alerts (0.26 vs 0.
 * diag2_v1_backup.py, diag2_v2_backup.py - earlier versions
 * ph_iP_res column (current vs power line residual) = feature for the ML model; too weak to be a rule on its own
 
-## Known weak spots (next work)
-* FLOW_VALVE pumps: the controller opens the valve and hides clogging. Use valve position: valve opening + suction falling = clogging.
-* Overlapping faults on one pump (seed 23 STRESS-05, PUMP-04): one alert can only carry one type.
-* Pre-existing impeller wear on T0 pumps (no flow meter): no clean reference, so it is hard to see.
-* Stress data: python3 make_dataset.py --tier stress --seed N --output <dir>   (about 15 s)
+## Known weak spots & honest limitations
+* **Overlapping faults on one pump** (e.g., `PUMP-04` bearing wear + discharge restriction, `STRESS-05` seed 23): each alert row carries a single `fault_type`, and the benchmark scorer matches the first in-window alert.
+* **T0 pumps (`T0_LEGACY`, no flow meter) under variable-speed or valve control**: pre-existing impeller wear is caught on fixed-speed T0 pumps (`PUMP-05`, `H / H_rated < 0.94`), but without a flow meter on `VFD_PRESSURE` / `FLOW_VALVE` pumps the operating point along the $H(Q)$ curve is under-constrained.
+* **Batch-cycling process pumps**: frequent start/stop cycles shorten steady-state windows and slightly raise false-alert rates on unseen stress batches (`0.098/day` avg).
+* **Advisory & read-only scope**: the detector + Laya severity categorizer (`SEVERE` / `MODERATE` / `MINIMAL` / `LOW_CONFIDENCE`) never write to PLC/VFD setpoints and earn no class society CBM credit without a formal PMS approval.
+* Stress data: `python3 make_dataset.py --tier stress --seed N --output <dir>` (about 15 s)

@@ -3,12 +3,16 @@ import numpy as np, pandas as pd
 from .._vendor import baselines as B
 CH = B.CH; COUPLED = B.COUPLED
 THERMAL = {"bt", "wt", "tf"}
+def _ns(s):
+    """same time resolution everywhere (newer pandas refuses to merge ms with us timestamps)"""
+    return pd.to_datetime(s, utc=True).astype("datetime64[ns, UTC]")
 
 def prep(zf, ctx, snapf, assets=None):
     """per-asset helper columns: minutes since start, length of preceding stop, context, vibration ratios"""
     out = []
     for a, g in zf.groupby("asset_id", sort=False):
         g = g.sort_values("window_start_utc").reset_index(drop=True)
+        g["window_start_utc"] = _ns(g["window_start_utc"])
         run = ((g.operating_mode == "RUNNING") & (g.running_fraction >= 0.99)).values
         since = np.zeros(len(g)); stop_len = np.zeros(len(g)); s = 0; off = 0; last_stop = 0
         for j, x in enumerate(run):
@@ -19,9 +23,10 @@ def prep(zf, ctx, snapf, assets=None):
                 off += 1; s = 0
             since[j] = s; stop_len[j] = last_stop
         g["since_start"] = since; g["prev_stop_min"] = stop_len
-        c = ctx[ctx.asset_id == a].sort_values("t")
+        c = ctx[ctx.asset_id == a].sort_values("t").copy(); c["t"] = _ns(c["t"])
         g = pd.merge_asof(g, c[["t", "sea_state_hs_m", "suction_static_head_m"]], left_on="window_start_utc", right_on="t", direction="backward").drop(columns="t")
-        sf = snapf[snapf.asset_id == a].sort_values("time")
+        sf = snapf[snapf.asset_id == a].sort_values("time").copy()
+        if len(sf): sf["time"] = _ns(sf["time"])
         if len(sf):
             g = pd.merge_asof(g, sf[["time", "r_bpfo", "r_1x", "r_2x", "r_hf", "b_idx", "r_bidx"]], left_on="window_start_utc", right_on="time", direction="backward").drop(columns="time")
         else:
@@ -47,7 +52,7 @@ def add_physics(g, s):
     r = r.clip(lower=0.3)
     ps = g.get("suction_pressure_kpa__mean")
     if ps is None or ps.isna().all():                      # T0: no suction gauge
-        if "LT_FRESH" in str(s.profile): ps = pd.Series(120.0, index=g.index)   # closed loop held at 120 kPa
+        if "LT_FRESH" in str(s.get("profile", "")): ps = pd.Series(120.0, index=g.index)   # closed loop held at 120 kPa
         else: ps = rho * G * g["suction_static_head_m"].ffill().bfill().fillna(2.5) / 1000
     H = (g["discharge_pressure_kpa__mean"] - ps) * 1000 / (rho * G)
     g["ph_Ht"] = H / (s.pump_rated_head_m * r ** 2)
@@ -78,12 +83,40 @@ def add_physics(g, s):
         g["ph_sigma"] = npsha / (s.npsh3_at_bep_m * r ** 2 * (0.55 + 0.45 * qn.clip(0, 1.6) ** 2.6))
     else:
         g["ph_sigma"] = np.nan
-    # motor current = magnetising current + part proportional to power (feature for the ML model)
-    if pw is not None and pw.notna().any():
-        X = np.c_[np.ones(first.sum()), pw[first], r[first]]
-        if len(X) > 60:
-            b, *_ = np.linalg.lstsq(X, g["motor_current_a__mean"][first], rcond=None)
-            g["ph_iP_res"] = (g["motor_current_a__mean"] - (b[0] + b[1] * pw + b[2] * r)) / g["motor_current_a__mean"][first].median()
+    # STEP 1 - fixed physics references (a slow drift cannot drag them along like B1's 24 h baseline)
+    early = ok & (ok.cumsum() <= 360)                       # first 6 h of settled running
+    g["ph_iP_res"] = np.nan
+    ic = g.get("motor_current_a__mean")
+    if pw is not None and pw.notna().any() and ic is not None and ic.notna().any() and early.sum() > 60:
+        # motor current = magnetising current + part proportional to power
+        X = np.c_[np.ones(early.sum()), pw[early], r[early]]
+        b, *_ = np.linalg.lstsq(X, ic[early], rcond=None)
+        i0 = b[0] + b[2] * r[early].median()                   # current at zero power = magnetising current
+        P_span = pw[early].quantile(0.95) / max(pw[early].quantile(0.05), 1e-6)
+        i_rated = s.get("motor_rated_current_a", np.nan)
+        p_rated = s.get("motor_rated_kw", np.nan)
+        if pd.notna(i_rated) and pd.notna(p_rated) and p_rated > 0:
+            physical = (0.2 * i_rated <= i0 <= 0.6 * i_rated) and b[1] > 0 and P_span > 1.05
+            if not physical:                                   # reference too narrow / unphysical -> use rated-motor line
+                i0 = 0.35 * i_rated; slope = (i_rated - i0) / p_rated
+                k_fit = np.median((ic[early] - i0) / pw[early].clip(lower=1e-3) / slope)
+                b = np.array([i0, slope * k_fit, 0.0])
+        res = (ic - (b[0] + b[1] * pw + b[2] * r)) / ic[early].median()
+        g["ph_iP_res"] = res.where(ok).rolling(60, min_periods=30).median()
+    bt = g.get("bearing_temp_c__mean")
+    g["ph_bt_dev"] = np.nan; g["ph_bt_same_h"] = 0.0
+    if bt is not None and bt.notna().any():
+        d = bt.ffill() - g["fluid_temp_c__mean"]               # bearing runs a fixed amount above the water it pumps
+        g["ph_bt_dev"] = (d - d.where(first).median()).where(ok).rolling(60, min_periods=30).median()
+        x = bt.ffill(); chg = x.diff().fillna(1).ne(0)
+        last_chg = g["window_start_utc"].where(chg).ffill()
+        g["ph_bt_same_h"] = (g["window_start_utc"] - last_chg).dt.total_seconds() / 3600
+    # STEP 2 - look inside the minute: max - min range vs this pump's normal range
+    for c in ("flow_m3_h", "discharge_pressure_kpa", "suction_pressure_kpa", "motor_current_a", "motor_power_kw", "motor_speed_rpm"):
+        if c + "__max" in g and g[c + "__max"].notna().any():
+            rng = g[c + "__max"] - g[c + "__min"]
+            ref = rng.where(first).quantile(0.99)
+            g["ph_rr_" + c] = rng / ref if ref and ref > 0 else np.nan
     g["ph_has_flow"] = fl is not None and fl.notna().any()
     return g
 
@@ -120,6 +153,12 @@ def diagnose2(g, j, k, ctl):
     for c in z:
         if flag("flat_" + c) and flag("steady") and c in ("pd", "ps", "q", "bt", "i", "tf", "wt"):
             return "SENSOR", "SENSOR_STUCK", 0.9, f"{CH[c]} frozen while pump running", f"Check transmitter {CH[c]}."
+    # --- noise spikes: ONE channel's in-minute spread explodes (average unchanged), all others calm
+    zsv = {c: float(r["zs_" + c]) for c in CH if "zs_" + c in r.index and not pd.isna(r["zs_" + c])}
+    if zsv:
+        top = max(zsv, key=zsv.get)
+        if zsv[top] > 15 and all(v < 5 for c, v in zsv.items() if c != top):
+            return "SENSOR", "SENSOR_NOISE_SPIKES", 0.8, f"{CH[top]} in-minute spread z={zsv[top]:.0f}, all other channels calm (<5)", f"Check cabling / grounding of {CH[top]}."
     # --- single-instrument deviations -> sensor faults
     for c in sorted(z, key=lambda c: -abs(z[c])):
         if abs(z[c]) <= k or c not in COUPLED or c in ("v", "a", "c"): continue
@@ -219,7 +258,44 @@ def detect(zp, assets, k=6.0, persist=15):
         if x["fault_type"] != "CAVITATION" and key in last and t - last[key] < B.REFRACTORY:
             continue
         last[key] = t; keep.append(x)
-    return pd.DataFrame(keep, columns=B._COLS)
+    al = pd.DataFrame(keep, columns=B._COLS)
+    return _post_relabel(al, zp, ctl, k)
+
+def _post_relabel(al, zp, ctl, k=6.0):
+    """Refractory-preserving physics tie-breakers applied after suppression rhythm is fixed."""
+    if not len(al): return al
+    al = al.copy()
+    nz = lambda v: 0.0 if v is None or pd.isna(v) else float(v)
+    for idx, row in al.iterrows():
+        ft, a = row["fault_type"], row["asset_id"]
+        if ft == "SENSOR_NOISE_SPIKES" and any(vch in str(row["evidence"]) for vch in ("vibration_rms_mm_s", "vibration_accel_rms_g", "vibration_crest_factor")):
+            t = pd.Timestamp(row["alert_time_utc"]) - pd.Timedelta(minutes=1)
+            m = zp[(zp.asset_id == a) & (zp.window_start_utc == t)]
+            if len(m):
+                r = m.iloc[0]
+                if nz(r.get("ph_dH")) > 0.04 and nz(r.get("ph_dP")) < -0.03:
+                    al.at[idx, "event_class"] = "MACHINE"
+                    al.at[idx, "fault_type"] = "DISCHARGE_RESTRICTION"
+                    al.at[idx, "confidence"] = 0.75
+                    al.at[idx, "recommended_action"] = "Check discharge valves and heat-exchanger fouling."
+        elif ft == "UNKNOWN":
+            t = pd.Timestamp(row["alert_time_utc"]) - pd.Timedelta(minutes=1)
+            m = zp[(zp.asset_id == a) & (zp.window_start_utc == t)]
+            if len(m):
+                r = m.iloc[0]
+                zpd, zi, zpw = nz(r.get("z_pd")), nz(r.get("z_i")), nz(r.get("z_pw"))
+                dH = nz(r.get("ph_dH"))
+                hyd = max(abs(nz(r.get("z_" + c))) for c in ("ps", "pd", "q", "n", "pw"))
+                if hyd < k / 2:
+                    al.at[idx, "fault_type"] = "BEARING_WEAR"
+                    al.at[idx, "confidence"] = 0.65
+                elif zpd < -k / 2 and zi > 0:
+                    al.at[idx, "fault_type"] = "SUCTION_STRAINER_CLOGGING"
+                    al.at[idx, "confidence"] = 0.65
+                elif (ctl.get(a) == "VFD_PRESSURE" and zpw < -k / 2 and zi < -k / 2) or (zpd > k / 2 and dH >= 0.04):
+                    al.at[idx, "fault_type"] = "DISCHARGE_RESTRICTION"
+                    al.at[idx, "confidence"] = 0.65
+    return al
 
 def physics_alerts(zp, existing, k, ctl, hold=10):
     """Alerts fired by physics even when no single z-score is extreme:
@@ -229,14 +305,36 @@ def physics_alerts(zp, existing, k, ctl, hold=10):
     for x in existing: ex.setdefault(x["asset_id"], []).append(pd.Timestamp(x["alert_time_utc"]))
     for a, g in zp.groupby("asset_id", sort=False):
         g = g.reset_index(drop=True)
+        ts_arr = list(g["window_start_utc"])
         run = g["operating_mode"].eq("RUNNING").values
+        steady = g["steady"].values
         sig = g["ph_sigma"].values if "ph_sigma" in g else np.full(len(g), np.nan)
         bidx = g["b_idx"].values if "b_idx" in g else np.full(len(g), np.nan)
         rbx = g["r_bidx"].values if "r_bidx" in g else np.full(len(g), np.nan)
         dfh = g["ph_dfH"].values if "ph_dfH" in g else np.full(len(g), np.nan)
-        cav_n = 0; in_ep = False; brg_done = False; hl_n = 0; last_hl = None
+        ht = g["ph_Ht"].values if "ph_Ht" in g else np.full(len(g), np.nan)
+        zi_arr = np.nan_to_num(g["z_i"].values, nan=0.0) if "z_i" in g else np.zeros(len(g))
+        zps_arr = np.nan_to_num(g["z_ps"].values, nan=0.0) if "z_ps" in g else np.zeros(len(g))
+        zv_abs = np.abs(np.nan_to_num(g["z_v"].values, nan=0.0)) if "z_v" in g else np.zeros(len(g))
+        za_abs = np.abs(np.nan_to_num(g["z_a"].values, nan=0.0)) if "z_a" in g else np.zeros(len(g))
+        has_fh_col = bool(g["ph_fH"].notna().any()) if "ph_fH" in g else False
+        cav_n = 0; in_ep = False; brg_done = False; hl_n = 0; last_hl = None; ht_n = 0; ht_done = False
+        # vibration recordings (every ~4 h): 2x line = misalignment, 1x line = imbalance
+        r1s = g["r_1x"].values if "r_1x" in g else np.full(len(g), np.nan)
+        r2s = g["r_2x"].values if "r_2x" in g else np.full(len(g), np.nan)
+        snap_hist = []; vib_done = {}
+        rr_cols = [c for c in g.columns if c.startswith("ph_rr_")]
+        RR = g[rr_cols].values if rr_cols else np.zeros((len(g), 0))
+        spike_hist = {}; last_sens = {}
+        ipr = g["ph_iP_res"].values if "ph_iP_res" in g else np.full(len(g), np.nan)
+        btd = g["ph_bt_dev"].values if "ph_bt_dev" in g else np.full(len(g), np.nan)
+        bts = g["ph_bt_same_h"].values if "ph_bt_same_h" in g else np.zeros(len(g))
+        ip_n = 0; bt_n = 0
+        def sens_ok(key, t, once=False):
+            if key in last_sens and (once or t - last_sens[key] < B.REFRACTORY): return False
+            last_sens[key] = t; return True
         for j in range(len(g)):
-            t = g["window_start_utc"].iloc[j] + pd.Timedelta(minutes=1)
+            t = ts_arr[j] + pd.Timedelta(minutes=1)
             near = any(abs((t - e).total_seconds()) < 600 for e in ex.get(a, []))
             fire = None
             low = run[j] and not np.isnan(sig[j]) and sig[j] < 1.15
@@ -248,14 +346,53 @@ def physics_alerts(zp, existing, k, ctl, hold=10):
             if not brg_done and not np.isnan(bidx[j]) and (bidx[j] > 0.6 or (bidx[j] > 0.25 and rbx[j] > 3)):
                 brg_done = True
                 fire = fire or ("BEARING_WEAR", 0.8, f"bearing-defect index {bidx[j]:.2f} (healthy ~0.1, x{rbx[j]:.1f} vs start)", "Plan bearing replacement; check lubrication.")
-            hl = run[j] and g["steady"].iloc[j] and not np.isnan(dfh[j]) and dfh[j] < -0.05
+            hl = run[j] and steady[j] and not np.isnan(dfh[j]) and dfh[j] < -0.05
             hl_n = hl_n + 1 if hl else 0
             if hl_n == 30 and (last_hl is None or t - last_hl > B.REFRACTORY):
                 last_hl = t
                 fire = fire or ("IMPELLER_WEAR", 0.5, f"head factor {dfh[j]*100:.0f}% below own normal for 30 min", "Performance test; inspect impeller / wear rings.")
+            if not has_fh_col and ctl.get(a) == "FIXED_SPEED" and not ht_done:
+                ht_low = run[j] and steady[j] and not np.isnan(ht[j]) and ht[j] < 0.94 and zi_arr[j] <= k / 2 and zps_arr[j] > -k / 2
+                ht_n = ht_n + 1 if ht_low else 0
+                if ht_n == 60:
+                    ht_done = True
+                    fire = fire or ("IMPELLER_WEAR", 0.5, f"head only {ht[j]*100:.0f}% of datasheet rated head for 60 steady min", "Performance test; inspect impeller / wear rings.")
+            # --- vibration recording rule: same verdict on two recordings in a row (for subtle T1/untriggered vibration)
+            if j > 0 and not np.isnan(r2s[j]) and (r2s[j] != r2s[j - 1] or r1s[j] != r1s[j - 1]):
+                v = ("MISALIGNMENT" if r2s[j] > 3.5 else ("IMBALANCE" if (r1s[j] > 2.5 and r2s[j] < 1.5) else None)) if za_abs[j] < k else None
+                snap_hist.append(v); snap_hist[:] = snap_hist[-2:]
+                if v and snap_hist == [v, v] and run[j] and not fire and v not in vib_done:
+                    vib_done[v] = t
+                    fire = (v, 0.75, f"vibration recording: 1x line x{r1s[j]:.1f}, 2x line x{r2s[j]:.1f} vs start, two recordings in a row "
+                            + ("(twice-per-turn wobble = shaft misalignment)" if v == "MISALIGNMENT" else "(once-per-turn wobble = imbalance)"),
+                            "Check coupling alignment." if v == "MISALIGNMENT" else "Inspect impeller for fouling; balance.")
+            # --- STEP 2: noise spikes = ONE channel's in-minute range explodes, the others stay normal
+            if run[j] and RR.shape[1]:
+                row = RR[j]; big = [i for i, v in enumerate(row) if not np.isnan(v) and v > 2.5]
+                for i in range(RR.shape[1]):
+                    h = spike_hist.setdefault(i, []); h.append(1 if (big == [i]) else 0)
+                    if len(h) > 15: h.pop(0)
+                    if sum(h) >= 5 and not fire and sens_ok("spk" + rr_cols[i], t):
+                        ch = rr_cols[i][6:]
+                        fire = ("SENSOR_NOISE_SPIKES", 0.75, f"{ch}: in-minute range x{row[i]:.1f} of normal in 5 of last 15 min, other channels normal", f"Check cabling / grounding of {ch}.")
+                        cls_override = "SENSOR"
+            # --- STEP 1: drift against a fixed physics reference
+            ip_n = ip_n + 1 if (not np.isnan(ipr[j]) and 0.04 < abs(ipr[j]) < 0.4) else 0     # >40 % = model failure, not a sensor
+            if ip_n == 60 and not fire and sens_ok("ip", t, once=True):
+                prev = ipr[j - 180] if j >= 180 and not np.isnan(ipr[j - 180]) else 0.0
+                step = abs(ipr[j] - prev) > 0.7 * abs(ipr[j])                          # appeared within ~2 h -> step
+                fire = ("SENSOR_CALIBRATION_SHIFT" if step else "SENSOR_DRIFT", 0.7,
+                        f"motor current {ipr[j]*100:+.1f}% off the current-power line (healthy < 2.5%), {'sudden' if step else 'gradual'}",
+                        "Verify current transducer against a clamp meter.")
+            vib_ok = (np.isnan(bidx[j]) or bidx[j] < 0.25) and zv_abs[j] < k and za_abs[j] < k / 2
+            bt_n = bt_n + 1 if (not np.isnan(btd[j]) and btd[j] > 6 and vib_ok) else 0
+            if bt_n == 60 and not fire and sens_ok("bt", t, once=True):
+                fire = ("SENSOR_DRIFT", 0.65, f"bearing temp {btd[j]:+.1f} C above its normal offset to the water, but vibration and bearing index normal", "Verify bearing temperature sensor.")
+            if run[j] and bts[j] > 2.0 and not fire and sens_ok("btstuck", t, once=True):
+                fire = ("SENSOR_STUCK", 0.8, f"bearing temperature unchanged for {bts[j]:.1f} h while running (healthy < 1 h)", "Check wireless sensor / battery.")
             if fire and not near:
-                cls, ft = "MACHINE", fire[0]
-                if ft == "IMPELLER_WEAR":           # let the full rule set name the head loss (air / cavitation / wear)
+                cls, ft = ("SENSOR" if fire[0].startswith("SENSOR") else "MACHINE"), fire[0]
+                if ft == "IMPELLER_WEAR" and has_fh_col:           # let the full rule set name the head loss (air / cavitation / wear)
                     cls, ft, c, e2, act = diagnose2(g, j, k, ctl.get(a))
                     if ft == "UNKNOWN": ft, c, e2, act = fire[0], fire[1], fire[2], fire[3]
                     fire = (ft, c, e2, act)
