@@ -7,8 +7,10 @@ export type IssueVerdict = "pass" | "fail" | "unchecked";
 export interface IssueRow {
   type: MachineIssueType;
   verdict: IssueVerdict;
-  /** The model raised this issue type on this pump */
+  /** The model raised this issue type on this pump (pump health: Detected vs OK) */
   detected: boolean;
+  /** Highest model confidence among this type's alerts (Detected rows only) */
+  detectedConfidence: number | null;
   /** Confidence of the wrong call (Fail rows only) */
   failConfidence: number | null;
   /** Plain-language reason for the verdict */
@@ -37,12 +39,14 @@ export function machineIssueRows(alerts: AlertPrediction[]): IssueRow[] {
   return MACHINE_ISSUE_TYPES.map((type): IssueRow => {
     const flagged = alerts.filter((a) => a.fault_type === type);
     const detected = flagged.length > 0;
+    const detectedConfidence = detected ? maxBy(flagged).confidence : null;
 
     if (!scored) {
       return {
         type,
         verdict: "unchecked",
         detected,
+        detectedConfidence,
         failConfidence: null,
         reason: detected
           ? `Flagged by the model (${flagged.length} alert${flagged.length === 1 ? "" : "s"}). Not checked: no known faults were supplied.`
@@ -62,6 +66,7 @@ export function machineIssueRows(alerts: AlertPrediction[]): IssueRow[] {
         type,
         verdict: "fail",
         detected,
+        detectedConfidence,
         failConfidence: worst.confidence,
         reason:
           `${wrong.length} alert${wrong.length === 1 ? "" : "s"} flagged this, but the real fault was ` +
@@ -76,6 +81,7 @@ export function machineIssueRows(alerts: AlertPrediction[]): IssueRow[] {
         type,
         verdict: "fail",
         detected,
+        detectedConfidence,
         failConfidence: worst.confidence,
         reason: `This fault was really present, but the model called it ${label(worst.fault_type)}${right}.`,
         alerts: [...flagged, ...missed],
@@ -86,6 +92,7 @@ export function machineIssueRows(alerts: AlertPrediction[]): IssueRow[] {
       type,
       verdict: "pass",
       detected,
+      detectedConfidence,
       failConfidence: null,
       reason: detected
         ? `Detected correctly (${hits.length} alert${hits.length === 1 ? "" : "s"}).`

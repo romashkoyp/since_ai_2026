@@ -1249,16 +1249,12 @@ p {
   border-bottom: 0;
 }
 
-.issue-acc.verdict-pass {
+.issue-acc.health-detected {
+  border-left: 3px solid var(--warn);
+}
+
+.issue-acc.health-ok {
   border-left: 3px solid var(--ok);
-}
-
-.issue-acc.verdict-fail {
-  border-left: 3px solid var(--danger);
-}
-
-.issue-acc.verdict-unchecked {
-  border-left: 3px solid var(--line);
 }
 
 .issue-acc-summary {
@@ -1300,11 +1296,26 @@ p {
   min-width: 0;
 }
 
-.issue-acc-state {
-  margin-left: 0.5rem;
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--muted);
+.health-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 7.2rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.health-badge.detected {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.health-badge.ok {
+  background: var(--ok-soft);
+  color: var(--ok);
 }
 
 .issue-reason {

@@ -153,8 +153,8 @@ export function CockpitView({
   const coolingOk = data.cooling_margin_pct >= 100;
   const saving = -proj.energyDelta;
   const issueRows = machineIssueRows(assetAlerts);
-  const passCount = issueRows.filter((r) => r.verdict === "pass").length;
-  const failCount = issueRows.filter((r) => r.verdict === "fail").length;
+  const detectedCount = issueRows.filter((r) => r.detected).length;
+  const correctCount = issueRows.filter((r) => r.verdict === "pass").length;
   const checked = issueRows.some((r) => r.verdict !== "unchecked");
 
   return (
@@ -256,49 +256,51 @@ export function CockpitView({
             <div className="card-title-row">
               <h2>Detected issues</h2>
               <span className="progress-pill">
-                {issueRows.length} issue types
-                {checked && (
-                  <>
-                    {" · "}
-                    {passCount} pass · {failCount} fail
-                  </>
-                )}
+                {detectedCount} detected
+                {checked && ` · model ${correctCount}/${issueRows.length} correct`}
               </span>
             </div>
             <p className="hint issue-legend">
-              Every machine issue type is checked once for this pump.{" "}
+              Every machine issue type, once. Left: the pump — <strong>Detected</strong> (with the model&apos;s
+              confidence) or <strong>OK</strong>.{" "}
               {checked ? (
                 <>
-                  <strong>Pass</strong> = matches the real faults · <strong>Fail</strong> = wrong or missed, with the
-                  confidence of the wrong call.
+                  Right: the model checked against the real faults — <strong>Correct</strong>, or{" "}
+                  <strong>Wrong</strong> with the confidence of the wrong call.
                 </>
               ) : (
-                "No known faults were supplied for this data, so the results are not checked."
+                "No known faults were supplied for this data, so the model's calls are not checked."
               )}
             </p>
             <div className="issue-accordion">
               {issueRows.map((row) => {
                 const confPct = row.failConfidence != null ? Math.round(row.failConfidence * 100) : null;
+                const detPct = row.detectedConfidence != null ? Math.round(row.detectedConfidence * 100) : null;
                 const latest = row.alerts.at(-1);
                 return (
-                  <details key={row.type} className={`issue-acc verdict-${row.verdict}`}>
+                  <details key={row.type} className={`issue-acc ${row.detected ? "health-detected" : "health-ok"}`}>
                     <summary className="issue-acc-summary">
                       <span className="issue-acc-chevron" aria-hidden />
-                      <span className="issue-acc-title">
-                        {explainFault(row.type).title}
-                        <small className="issue-acc-state">{row.detected ? "Flagged" : "Not flagged"}</small>
-                      </span>
+                      {row.detected ? (
+                        <span className="health-badge detected" title="The model detected this issue on the pump">
+                          <Icon name="warning" size={14} /> Detected{detPct != null && ` ${detPct}%`}
+                        </span>
+                      ) : (
+                        <span className="health-badge ok" title="Not detected on this pump">
+                          <Icon name="check" size={14} /> OK
+                        </span>
+                      )}
+                      <span className="issue-acc-title">{explainFault(row.type).title}</span>
                       {row.verdict === "pass" && (
-                        <span className="verdict-badge pass">
-                          <Icon name="check" size={14} /> Pass
+                        <span className="verdict-badge pass" title="Matches the real faults">
+                          <Icon name="check" size={14} /> Correct
                         </span>
                       )}
                       {row.verdict === "fail" && (
-                        <span className="verdict-badge fail">
-                          <Icon name="alert" size={14} /> Fail
+                        <span className="verdict-badge fail" title="Wrong or missed call">
+                          <Icon name="alert" size={14} /> Wrong
                         </span>
                       )}
-                      {row.verdict === "unchecked" && <span className="verdict-badge unknown">Not checked</span>}
                       {confPct != null && (
                         <span className="issue-acc-conf" title="Confidence of the wrong call">
                           <strong>{confPct}%</strong>
