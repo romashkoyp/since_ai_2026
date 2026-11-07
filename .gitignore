@@ -8,6 +8,16 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+server/.venv/
+
+# Node / frontend
+node_modules/
+client/dist/
+client/node_modules/
+*.tsbuildinfo
+
+# Docker
+*.log
 
 # Per-domain large artifacts (retrofit = Since AI 2026 cooling-pump project)
 retrofit/.venv/
