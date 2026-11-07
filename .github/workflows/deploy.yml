@@ -72,7 +72,25 @@ jobs:
               -p 127.0.0.1:8080:80 \
               since-ai-client:latest
             docker image prune -f
-            curl -sf http://127.0.0.1:8080/ >/dev/null
+
+            # nginx needs a moment after `docker run`; a single immediate curl gets "connection reset" (exit 56)
+            echo "Waiting for client container..."
+            ok=0
+            for i in $(seq 1 30); do
+              if curl -sf --max-time 2 -o /dev/null http://127.0.0.1:8080/; then
+                echo "Client OK"
+                ok=1
+                break
+              fi
+              echo "attempt $i/30 failed; container status:"
+              docker ps -a --filter name=since-ai-client --format '{{.Status}}' || true
+              sleep 2
+            done
+            if [ "$ok" -ne 1 ]; then
+              echo "Client health check failed. Logs:"
+              docker logs since-ai-client --tail 100 || true
+              exit 1
+            fi
             curl -sf -o /dev/null http://127.0.0.1/ || true
 
   deploy-backend:
