@@ -1,22 +1,28 @@
-import type { AlertPrediction } from "../types/alerts";
-import { MACHINE_ISSUE_TYPES, type MachineIssueType } from "./plain";
+import type { AlertPrediction, FaultType } from "../types/alerts";
 
 export type IssueVerdict = "pass" | "fail" | "unchecked";
 
-/** One row per machine issue type on the pump page — always all 8, never duplicated */
+/**
+ * One row per issue type on the pump page — every type always listed once, never duplicated.
+ *  - Pump result: Fail = this issue occurred (with how often and the highest confidence), Pass = no issue.
+ *  - Model check: was the model right about this type vs the recorded real faults (when known).
+ */
 export interface IssueRow {
-  type: MachineIssueType;
+  type: FaultType;
+  /** The issue occurred on this pump (the model raised alerts of this type) */
+  occurred: boolean;
+  /** Every alert of this type, oldest first — the same issue can repeat at different times */
+  occurrences: AlertPrediction[];
+  /** Highest confidence among the occurrences */
+  confidence: number | null;
+  /** Model check against the real faults */
   verdict: IssueVerdict;
-  /** The model raised this issue type on this pump (pump health: Detected vs OK) */
-  detected: boolean;
-  /** Highest model confidence among this type's alerts (Detected rows only) */
-  detectedConfidence: number | null;
-  /** Confidence of the wrong call (Fail rows only) */
-  failConfidence: number | null;
-  /** Plain-language reason for the verdict */
+  /** Confidence of the wrong call (verdict "fail" only) */
+  wrongConfidence: number | null;
+  /** Plain-language reason for the model check */
   reason: string;
-  /** Alerts behind the row: the model's alerts of this type, or the mislabelled real fault */
-  alerts: AlertPrediction[];
+  /** Alerts that make the model check wrong (wrong calls, or the mislabelled real fault) */
+  wrongAlerts: AlertPrediction[];
 }
 
 const label = (fault: string) => (fault === "NO_FAULT" ? "no fault, a false alarm" : fault.replaceAll("_", " ").toLowerCase());
@@ -26,78 +32,47 @@ function maxBy(alerts: AlertPrediction[]): AlertPrediction {
 }
 
 /**
- * Pass / Fail per issue type, from the alerts' ground truth (`correct`, `true_fault_type`):
- * - any alert flagged this type while the real fault was different -> Fail (confidence of that wrong call)
- * - a real fault of this type was labelled as something else      -> Fail (confidence of the wrong label)
- * - flagged, and every alert right                                -> Pass
- * - not flagged and not present                                   -> Pass
- * Without ground truth (an upload with no known-faults file) rows are "unchecked".
+ * Model check per type, from the alerts' ground truth (`correct`, `true_fault_type`):
+ * - any alert named this type while the real fault was different -> Wrong (confidence of that wrong call)
+ * - a real fault of this type was named as something else        -> Wrong (confidence of the wrong label)
+ * - otherwise                                                     -> Correct
+ * Without ground truth (an upload with no known-faults file) the check is "unchecked".
  */
-export function machineIssueRows(alerts: AlertPrediction[]): IssueRow[] {
+export function issueRows(alerts: AlertPrediction[], types: readonly FaultType[]): IssueRow[] {
   const scored = alerts.some((a) => a.correct != null);
 
-  return MACHINE_ISSUE_TYPES.map((type): IssueRow => {
-    const flagged = alerts.filter((a) => a.fault_type === type);
-    const detected = flagged.length > 0;
-    const detectedConfidence = detected ? maxBy(flagged).confidence : null;
-
+  return types.map((type): IssueRow => {
+    const occurrences = alerts.filter((a) => a.fault_type === type);
+    const base = {
+      type,
+      occurred: occurrences.length > 0,
+      occurrences,
+      confidence: occurrences.length ? maxBy(occurrences).confidence : null,
+    };
     if (!scored) {
-      return {
-        type,
-        verdict: "unchecked",
-        detected,
-        detectedConfidence,
-        failConfidence: null,
-        reason: detected
-          ? `Flagged by the model (${flagged.length} alert${flagged.length === 1 ? "" : "s"}). Not checked: no known faults were supplied.`
-          : "Not flagged by the model.",
-        alerts: flagged,
-      };
+      return { ...base, verdict: "unchecked", wrongConfidence: null, wrongAlerts: [],
+        reason: "No known faults were supplied for this data, so the model's call is not checked." };
     }
 
-    const hits = flagged.filter((a) => a.correct === true);
-    const wrong = flagged.filter((a) => a.correct === false);
+    const hits = occurrences.filter((a) => a.correct === true);
+    const wrong = occurrences.filter((a) => a.correct === false);
     const missed = alerts.filter((a) => a.true_fault_type === type && a.fault_type !== type);
     const right = hits.length ? ` (${hits.length} other alert${hits.length === 1 ? " was" : "s were"} right)` : "";
 
     if (wrong.length) {
       const worst = maxBy(wrong);
-      return {
-        type,
-        verdict: "fail",
-        detected,
-        detectedConfidence,
-        failConfidence: worst.confidence,
-        reason:
-          `${wrong.length} alert${wrong.length === 1 ? "" : "s"} flagged this, but the real fault was ` +
-          `${label(worst.true_fault_type ?? "NO_FAULT")}${right}.`,
-        alerts: flagged,
-      };
+      return { ...base, verdict: "fail", wrongConfidence: worst.confidence, wrongAlerts: wrong,
+        reason: `${wrong.length} alert${wrong.length === 1 ? "" : "s"} named this, but the real fault was ` +
+          `${label(worst.true_fault_type ?? "NO_FAULT")}${right}.` };
     }
-
     if (missed.length) {
       const worst = maxBy(missed);
-      return {
-        type,
-        verdict: "fail",
-        detected,
-        detectedConfidence,
-        failConfidence: worst.confidence,
-        reason: `This fault was really present, but the model called it ${label(worst.fault_type)}${right}.`,
-        alerts: [...flagged, ...missed],
-      };
+      return { ...base, verdict: "fail", wrongConfidence: worst.confidence, wrongAlerts: missed,
+        reason: `This fault was really present, but the model called it ${label(worst.fault_type)}${right}.` };
     }
-
-    return {
-      type,
-      verdict: "pass",
-      detected,
-      detectedConfidence,
-      failConfidence: null,
-      reason: detected
-        ? `Detected correctly (${hits.length} alert${hits.length === 1 ? "" : "s"}).`
-        : "Not present on this pump, and correctly not flagged.",
-      alerts: flagged,
-    };
+    return { ...base, verdict: "pass", wrongConfidence: null, wrongAlerts: [],
+      reason: base.occurred
+        ? "Matches the real faults recorded for this pump."
+        : "Not present on this pump, and correctly not raised." };
   });
 }

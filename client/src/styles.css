@@ -1300,7 +1300,7 @@ p {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  min-width: 7.2rem;
+  min-width: 4.4rem;
   padding: 0.15rem 0.55rem;
   border-radius: 999px;
   font-size: 0.75rem;
@@ -1335,6 +1335,58 @@ p {
 .issue-acc-conf strong {
   font-variant-numeric: tabular-nums;
   font-size: 0.9rem;
+}
+
+.issue-group {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.issue-group h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.issue-occ {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--ink-2);
+}
+
+.occ-list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0 0 0.5rem;
+  padding-left: 1.2rem;
+}
+
+.occ-list li {
+  font-size: 0.86rem;
+  color: var(--ink-2);
+}
+
+.occ-list li > * + * {
+  margin-left: 0.5rem;
+}
+
+.occ-time {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.occ-wrong {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.occ-evidence {
+  display: block;
+  margin: 0.15rem 0 0 !important;
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
 }
 
 .issue-acc-meter {

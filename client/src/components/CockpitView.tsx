@@ -1,15 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchCockpit } from "../api/client";
 import { getDummyCockpit } from "../data/dummy";
-import { machineIssueRows } from "../lib/issues";
 import {
   channelLabel,
-  confidenceLabel,
   explainFault,
   friendlyTime,
   healthScore,
   modeLabel,
-  plainStep,
   severityOf,
   systemLabel,
   timeLeftLabel,
@@ -17,6 +14,7 @@ import {
 import type { AlertPrediction, AssetStatus, CockpitMode, CockpitResponse } from "../types/alerts";
 import { HealthBar, StatusBadge } from "./FleetView";
 import { Icon } from "./Icon";
+import { IssueChecklist } from "./IssueChecklist";
 import { LoadingBlock } from "./LoadingBlock";
 import { Sparkline } from "./Sparkline";
 
@@ -152,10 +150,6 @@ export function CockpitView({
   const riskProjPct = Math.round(proj.risk * 100);
   const coolingOk = data.cooling_margin_pct >= 100;
   const saving = -proj.energyDelta;
-  const issueRows = machineIssueRows(assetAlerts);
-  const detectedCount = issueRows.filter((r) => r.detected).length;
-  const correctCount = issueRows.filter((r) => r.verdict === "pass").length;
-  const checked = issueRows.some((r) => r.verdict !== "unchecked");
 
   return (
     <div className="pump-page">
@@ -252,101 +246,8 @@ export function CockpitView({
 
       {mode === "diagnose" ? (
         <div className="tab-body" role="tabpanel">
+          <IssueChecklist alerts={assetAlerts} />
           <section className="card diagnose-panel">
-            <div className="card-title-row">
-              <h2>Detected issues</h2>
-              <span className="progress-pill">
-                {detectedCount} detected
-                {checked && ` · model ${correctCount}/${issueRows.length} correct`}
-              </span>
-            </div>
-            <p className="hint issue-legend">
-              Every machine issue type, once. Left: the pump — <strong>Detected</strong> (with the model&apos;s
-              confidence) or <strong>OK</strong>.{" "}
-              {checked ? (
-                <>
-                  Right: the model checked against the real faults — <strong>Correct</strong>, or{" "}
-                  <strong>Wrong</strong> with the confidence of the wrong call.
-                </>
-              ) : (
-                "No known faults were supplied for this data, so the model's calls are not checked."
-              )}
-            </p>
-            <div className="issue-accordion">
-              {issueRows.map((row) => {
-                const confPct = row.failConfidence != null ? Math.round(row.failConfidence * 100) : null;
-                const detPct = row.detectedConfidence != null ? Math.round(row.detectedConfidence * 100) : null;
-                const latest = row.alerts.at(-1);
-                return (
-                  <details key={row.type} className={`issue-acc ${row.detected ? "health-detected" : "health-ok"}`}>
-                    <summary className="issue-acc-summary">
-                      <span className="issue-acc-chevron" aria-hidden />
-                      {row.detected ? (
-                        <span className="health-badge detected" title="The model detected this issue on the pump">
-                          <Icon name="warning" size={14} /> Detected{detPct != null && ` ${detPct}%`}
-                        </span>
-                      ) : (
-                        <span className="health-badge ok" title="Not detected on this pump">
-                          <Icon name="check" size={14} /> OK
-                        </span>
-                      )}
-                      <span className="issue-acc-title">{explainFault(row.type).title}</span>
-                      {row.verdict === "pass" && (
-                        <span className="verdict-badge pass" title="Matches the real faults">
-                          <Icon name="check" size={14} /> Correct
-                        </span>
-                      )}
-                      {row.verdict === "fail" && (
-                        <span className="verdict-badge fail" title="Wrong or missed call">
-                          <Icon name="alert" size={14} /> Wrong
-                        </span>
-                      )}
-                      {confPct != null && (
-                        <span className="issue-acc-conf" title="Confidence of the wrong call">
-                          <strong>{confPct}%</strong>
-                          <span className="issue-acc-meter" aria-hidden>
-                            <span className="bg-danger" style={{ width: `${confPct}%` }} />
-                          </span>
-                        </span>
-                      )}
-                    </summary>
-                    <div className="issue-acc-body">
-                      <p className="issue-reason">{row.reason}</p>
-                      {row.alerts.length > 0 && (
-                        <dl className="issue-acc-meta">
-                          <div>
-                            <dt>Noticed</dt>
-                            <dd>{row.alerts.map((a) => friendlyTime(a.alert_time_utc)).join(" · ")}</dd>
-                          </div>
-                          {confPct != null && row.failConfidence != null && (
-                            <div>
-                              <dt>Confidence</dt>
-                              <dd>
-                                {confidenceLabel(row.failConfidence)} · {confPct}%
-                              </dd>
-                            </div>
-                          )}
-                        </dl>
-                      )}
-                      {latest?.evidence && (
-                        <p className="issue-evidence">
-                          <strong>Evidence:</strong> {latest.evidence}
-                        </p>
-                      )}
-                      {row.detected && latest?.recommended_action && (
-                        <p className="issue-action">
-                          <Icon name="check" size={14} /> {plainStep(latest.recommended_action)}
-                        </p>
-                      )}
-                      {!row.detected && row.alerts.length === 0 && (
-                        <p className="muted">{explainFault(row.type).whatItMeans}</p>
-                      )}
-                    </div>
-                  </details>
-                );
-              })}
-            </div>
-
             {data.trends.length > 0 && (
               <details className="issue-section-acc">
                 <summary>Sensor trends</summary>

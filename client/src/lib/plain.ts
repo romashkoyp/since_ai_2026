@@ -95,6 +95,15 @@ export const MACHINE_ISSUE_TYPES = [
 
 export type MachineIssueType = (typeof MACHINE_ISSUE_TYPES)[number];
 
+/** SENSOR fault types shown on Pump details (instrument / data problems). */
+export const SENSOR_ISSUE_TYPES = [
+  "SENSOR_DRIFT",
+  "SENSOR_STUCK",
+  "SENSOR_CALIBRATION_SHIFT",
+  "SENSOR_NOISE_SPIKES",
+  "COMMUNICATION_LOSS",
+] as const satisfies readonly FaultType[];
+
 export function isMachineIssue(fault: string | null | undefined): fault is MachineIssueType {
   return !!fault && (MACHINE_ISSUE_TYPES as readonly string[]).includes(fault);
 }
