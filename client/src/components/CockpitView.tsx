@@ -5,7 +5,6 @@ import {
   channelLabel,
   explainFault,
   friendlyTime,
-  healthScore,
   modeLabel,
   severityOf,
   systemLabel,
@@ -15,6 +14,7 @@ import type { AlertPrediction, AssetStatus, CockpitMode, CockpitResponse } from 
 import { HealthBar, StatusBadge } from "./FleetView";
 import { Icon } from "./Icon";
 import { IssueChecklist } from "./IssueChecklist";
+import { pumpHealth } from "../lib/issues";
 import { LoadingBlock } from "./LoadingBlock";
 import { Sparkline } from "./Sparkline";
 
@@ -140,6 +140,7 @@ export function CockpitView({
   const severity = asset ? severityOf(asset) : data.risk_at_100 > 0.5 ? "act_now" : "ok";
   const isHealthy = severity === "ok" && /no active/i.test(data.diagnosis);
   const fault = explainFault(data.fault_type ?? alert?.fault_type);
+  const health = pumpHealth(assetAlerts);
   const plainTitle = isHealthy ? "Working normally" : diagnosisPlain(data.diagnosis);
   const timeLeft = timeLeftLabel(asset?.rul_hours);
   const rulHours = asset?.rul_hours ?? null;
@@ -187,7 +188,7 @@ export function CockpitView({
             <div>
               <dt>Health</dt>
               <dd>
-                <HealthBar value={healthScore(asset)} />
+                <HealthBar value={health.pct} title={`${health.passed} of ${health.total} machine issue types pass`} />
               </dd>
             </div>
           )}

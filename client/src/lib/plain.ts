@@ -151,18 +151,6 @@ export const SEVERITY_LABEL: Record<Severity, string> = {
   ok: "Working well",
 };
 
-/**
- * Display-only estimate from status + remaining safe hours; not a model output.
- */
-export function healthScore(asset: AssetStatus): number {
-  const sev = severityOf(asset);
-  const rul = asset.rul_hours ?? 0;
-  if (sev === "act_now") return Math.round(15 + (Math.min(rul, 24) / 24) * 20);
-  if (sev === "attention") return Math.round(45 + (Math.min(rul, 96) / 96) * 25);
-  if (sev === "sensor") return 85;
-  return asset.load_pct > 85 ? 92 : 97;
-}
-
 const SYSTEMS: Record<string, string> = {
   "SW cooling": "Seawater cooling",
   "LT freshwater": "Freshwater cooling",

@@ -1,4 +1,5 @@
 import type { AlertPrediction, FaultType } from "../types/alerts";
+import { MACHINE_ISSUE_TYPES } from "./plain";
 
 export type IssueVerdict = "pass" | "fail" | "unchecked";
 
@@ -23,6 +24,24 @@ export interface IssueRow {
   reason: string;
   /** Alerts that make the model check wrong (wrong calls, or the mislabelled real fault) */
   wrongAlerts: AlertPrediction[];
+}
+
+/** The 8 machine issue types (sensor problems do not count against the pump's own health). */
+const MACHINE_TYPES: readonly FaultType[] = MACHINE_ISSUE_TYPES;
+
+export interface PumpHealth {
+  /** Machine issue types with no issue */
+  passed: number;
+  total: number;
+  /** passed / total, as a whole percentage */
+  pct: number;
+}
+
+/** Health = machine issue types that passed / 8 — e.g. 2 failed types -> 6/8 = 75 %. */
+export function pumpHealth(pumpAlerts: AlertPrediction[]): PumpHealth {
+  const failed = new Set(pumpAlerts.map((a) => a.fault_type).filter((t) => MACHINE_TYPES.includes(t))).size;
+  const total = MACHINE_TYPES.length;
+  return { passed: total - failed, total, pct: Math.round((100 * (total - failed)) / total) };
 }
 
 const label = (fault: string) => (fault === "NO_FAULT" ? "no fault, a false alarm" : fault.replaceAll("_", " ").toLowerCase());

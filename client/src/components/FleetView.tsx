@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { downloadPredictionAlertsCsv } from "../lib/alertsCsv";
+import { pumpHealth } from "../lib/issues";
 import {
-  healthScore,
   SEVERITY_LABEL,
   SEVERITY_ORDER,
   severityOf,
@@ -37,10 +37,11 @@ export function StatusBadge({ severity }: { severity: Severity }) {
   );
 }
 
-export function HealthBar({ value }: { value: number }) {
-  const tone = value < 40 ? "act_now" : value < 75 ? "attention" : "ok";
+export function HealthBar({ value, title }: { value: number; title?: string }) {
+  // health = machine issue types passed / 8: green only when nothing failed
+  const tone = value >= 100 ? "ok" : value >= 50 ? "attention" : "act_now";
   return (
-    <div className="health">
+    <div className="health" title={title}>
       <div className="health-track" aria-hidden>
         <span className={`health-fill sev-${tone}`} style={{ width: `${value}%` }} />
       </div>
@@ -68,6 +69,12 @@ export function FleetView({
       }),
     [assets],
   );
+
+  const alertsByPump = useMemo(() => {
+    const m = new Map<string, AlertPrediction[]>();
+    for (const a of alerts) m.set(a.asset_id, [...(m.get(a.asset_id) ?? []), a]);
+    return m;
+  }, [alerts]);
 
   const counts = useMemo(() => {
     const c: Record<Severity, number> = { act_now: 0, attention: 0, sensor: 0, ok: 0 };
@@ -154,6 +161,7 @@ export function FleetView({
           <ul className="pump-grid">
             {visible.map((asset) => {
               const sev = severityOf(asset);
+              const health = pumpHealth(alertsByPump.get(asset.asset_id) ?? []);
               return (
                 <li key={asset.asset_id}>
                   <div className={`pump-tile sev-${sev}`}>
@@ -169,7 +177,10 @@ export function FleetView({
                       <p className="pump-tile-system">{systemLabel(asset.system)}</p>
                       <div className="pump-tile-row">
                         <span>Health</span>
-                        <HealthBar value={healthScore(asset)} />
+                        <HealthBar
+                          value={health.pct}
+                          title={`${health.passed} of ${health.total} machine issue types pass`}
+                        />
                       </div>
                     </button>
                     <div className="pump-tile-actions">
