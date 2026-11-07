@@ -26,6 +26,10 @@ export interface AlertPrediction {
   confidence: number;
   evidence?: string | null;
   recommended_action?: string | null;
+  /** Ground-truth fault when available (physics dashboard export) */
+  true_fault_type?: string | null;
+  /** Whether predicted fault_type matched ground truth */
+  correct?: boolean | null;
 }
 
 export interface AssetStatus {

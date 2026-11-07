@@ -1,10 +1,13 @@
 import type {
-  AlertPrediction,
   AssetStatus,
   CockpitResponse,
   FleetSummary,
   ScorecardResponse,
 } from "../types/alerts";
+import { COMPANY_TRAIN_ALERTS } from "./companyTrainAlerts";
+
+/** Physics detector alerts (company train) + a few Screen-2 demo rows */
+export const DUMMY_ALERTS = COMPANY_TRAIN_ALERTS;
 
 export const DUMMY_SUMMARY: FleetSummary = {
   vessel: "M/V Borealis Voyager · Fleet overview",
@@ -31,54 +34,6 @@ export const DUMMY_ASSETS: AssetStatus[] = [
   { asset_id: "PUMP-10", site: "Vessel C", system: "SW cooling", tier: "T1", status: "healthy", mode: "RUNNING", load_pct: 58, open_alerts: 0 },
   { asset_id: "PUMP-11", site: "Vessel C", system: "SW cooling", tier: "T2", status: "alert", mode: "RUNNING", load_pct: 84, open_alerts: 1, fault_summary: "Cavitation signature", rul_hours: 36 },
   { asset_id: "PUMP-12", site: "Vessel C", system: "Transfer", tier: "T0", status: "healthy", mode: "STANDBY", load_pct: 0, open_alerts: 0 },
-];
-
-export const DUMMY_ALERTS: AlertPrediction[] = [
-  {
-    asset_id: "PUMP-04",
-    alert_time_utc: "2026-03-12T08:14:00Z",
-    event_class: "MACHINE",
-    fault_type: "BEARING_WEAR",
-    confidence: 0.91,
-    evidence: "bearing_temp residual + crest factor rise; BPFO elevated",
-    recommended_action: "Inspect DE bearing; plan replacement within 48h",
-  },
-  {
-    asset_id: "PUMP-06",
-    alert_time_utc: "2026-03-12T09:02:30Z",
-    event_class: "MACHINE",
-    fault_type: "SUCTION_STRAINER_CLOGGING",
-    confidence: 0.87,
-    evidence: "suction pressure drop with stable discharge",
-    recommended_action: "Clean suction strainer; verify NPSH margin",
-  },
-  {
-    asset_id: "PUMP-02",
-    alert_time_utc: "2026-03-12T07:41:00Z",
-    event_class: "SENSOR",
-    fault_type: "SENSOR_DRIFT",
-    confidence: 0.78,
-    evidence: "vibration channel slope vs coupled channels stable",
-    recommended_action: "Calibrate sensor; mask channel for machine checks",
-  },
-  {
-    asset_id: "PUMP-08",
-    alert_time_utc: "2026-03-12T10:05:00Z",
-    event_class: "MACHINE",
-    fault_type: "CAVITATION",
-    confidence: 0.89,
-    evidence: "Suction Ps -3.8σ; Housing Acoustic Resonance +4.3σ (2.6–3.0 kHz); Head vs Affinity -2.9σ",
-    recommended_action: "Derate to 88% immediately; transfer duty to Standby PUMP-07 at 04:00 UTC; backflush strainer",
-  },
-  {
-    asset_id: "PUMP-11",
-    alert_time_utc: "2026-03-12T10:18:00Z",
-    event_class: "MACHINE",
-    fault_type: "CAVITATION",
-    confidence: 0.84,
-    evidence: "accel RMS spike with suction head drop",
-    recommended_action: "Reduce speed setpoint; check suction level",
-  },
 ];
 
 /** Screen 2 mock — docs/ui_images/screen2_unified_asset_cockpit.jpg */

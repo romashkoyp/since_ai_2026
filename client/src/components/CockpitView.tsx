@@ -4,7 +4,6 @@ import { getDummyCockpit } from "../data/dummy";
 import {
   channelLabel,
   confidenceLabel,
-  deviationLabel,
   explainFault,
   friendlyTime,
   healthScore,
@@ -24,6 +23,7 @@ interface Props {
   assetId: string | null;
   asset: AssetStatus | null;
   alert: AlertPrediction | null;
+  assetAlerts?: AlertPrediction[];
   mode: CockpitMode;
   onModeChange: (mode: CockpitMode) => void;
   onBack: () => void;
@@ -63,6 +63,7 @@ export function CockpitView({
   assetId,
   asset,
   alert,
+  assetAlerts = [],
   mode,
   onModeChange,
   onBack,
@@ -72,7 +73,6 @@ export function CockpitView({
   const [loading, setLoading] = useState(false);
   const [usedFallback, setUsedFallback] = useState(false);
   const [speed, setSpeed] = useState(100);
-  const [done, setDone] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!assetId) {
@@ -85,7 +85,6 @@ export function CockpitView({
     setLoading(true);
     setUsedFallback(false);
     setData(null);
-    setDone({});
 
     async function load(id: string) {
       try {
@@ -143,7 +142,6 @@ export function CockpitView({
   const isHealthy = severity === "ok" && /no active/i.test(data.diagnosis);
   const fault = explainFault(alert?.fault_type);
   const plainTitle = isHealthy ? "Working normally" : diagnosisPlain(data.diagnosis);
-  const confidencePct = Math.round(data.confidence * 100);
   const timeLeft = timeLeftLabel(asset?.rul_hours);
   const rulHours = asset?.rul_hours ?? null;
 
@@ -153,7 +151,6 @@ export function CockpitView({
   const riskProjPct = Math.round(proj.risk * 100);
   const coolingOk = data.cooling_margin_pct >= 100;
   const saving = -proj.energyDelta;
-  const doneCount = data.sop.filter((s) => done[s]).length;
 
   return (
     <div className="pump-page">
@@ -250,155 +247,168 @@ export function CockpitView({
 
       {mode === "diagnose" ? (
         <div className="tab-body" role="tabpanel">
-          <div className="grid-2">
-            <section className="card">
-              <h2>Primary diagnosis</h2>
-              <p className="lead">{isHealthy ? "No problems found. All readings look normal." : plainTitle}</p>
-              <p className="hint">{data.diagnosis}</p>
-
-              <div className="confidence">
-                <div className="confidence-head">
-                  <span>How sure we are</span>
-                  <strong>
-                    {confidenceLabel(data.confidence)} · {confidencePct}%
-                  </strong>
-                </div>
-                <div className="meter" aria-hidden>
-                  <span style={{ width: `${confidencePct}%` }} />
-                </div>
-              </div>
-
-              <p className="safe">{data.safe_window}</p>
-
-              {data.evidence.length > 0 && (
-                <>
-                  <h3>Physical deviation evidence</h3>
-                  <ul className="signs">
-                    {data.evidence.map((row) => {
-                      const dev = deviationLabel(row.sigma);
-                      return (
-                        <li key={row.channel} className={`sign lvl-${dev.level}`}>
-                          <div>
-                            <strong>{channelLabel(row.channel)}</strong>
-                            <span>
-                              {dev.text} ({row.sigma > 0 ? "+" : ""}
-                              {row.sigma.toFixed(1)}σ)
-                            </span>
-                          </div>
-                          <div className="sign-bar" aria-hidden>
-                            <span style={{ width: `${Math.min((Math.abs(row.sigma) / 5) * 100, 100)}%` }} />
-                          </div>
-                          <p className="sign-note">{row.note}</p>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </>
-              )}
-            </section>
-
-            <section className="card">
-              <div className="card-title-row">
-                <h2>SOP action protocol</h2>
-                {data.sop.length > 0 && (
-                  <span className="progress-pill">
-                    {doneCount} of {data.sop.length} done
-                  </span>
+          <section className="card diagnose-panel">
+            <div className="card-title-row">
+              <h2>Detected issues</h2>
+              <span className="progress-pill">
+                {assetAlerts.length} alert{assetAlerts.length === 1 ? "" : "s"}
+                {assetAlerts.some((a) => a.correct != null) && (
+                  <>
+                    {" · "}
+                    {assetAlerts.filter((a) => a.correct === true).length} pass
+                    {" · "}
+                    {assetAlerts.filter((a) => a.correct === false).length} fail
+                  </>
                 )}
+              </span>
+            </div>
+            <p className="hint issue-legend">
+              Tap a row for evidence. <strong>Pass</strong> = matches ground truth · <strong>Fail</strong> = wrong
+              label.
+            </p>
+            {assetAlerts.length === 0 ? (
+              <p className="muted">No detector alerts for this pump in the current data set.</p>
+            ) : (
+              <div className="issue-accordion">
+                {assetAlerts.map((a, i) => {
+                  const confPct = Math.round(a.confidence * 100);
+                  const verdict =
+                    a.correct === true ? "pass" : a.correct === false ? "fail" : "unknown";
+                  const key = `${a.asset_id}-${a.alert_time_utc}-${a.fault_type}-${i}`;
+                  return (
+                    <details key={key} className={`issue-acc verdict-${verdict}`}>
+                      <summary className="issue-acc-summary">
+                        <span className="issue-acc-chevron" aria-hidden />
+                        <span className="issue-acc-title">{explainFault(a.fault_type).title}</span>
+                        {verdict === "pass" && (
+                          <span className="verdict-badge pass">
+                            <Icon name="check" size={14} /> Pass
+                          </span>
+                        )}
+                        {verdict === "fail" && (
+                          <span className="verdict-badge fail">
+                            <Icon name="alert" size={14} /> Fail
+                          </span>
+                        )}
+                        {verdict === "unknown" && <span className="verdict-badge unknown">Unchecked</span>}
+                        <span className="issue-acc-conf">
+                          <strong>{confPct}%</strong>
+                          <span className="issue-acc-meter" aria-hidden>
+                            <span
+                              className={verdict === "fail" ? "bg-danger" : verdict === "pass" ? "bg-ok" : ""}
+                              style={{ width: `${confPct}%` }}
+                            />
+                          </span>
+                        </span>
+                      </summary>
+                      <div className="issue-acc-body">
+                        <dl className="issue-acc-meta">
+                          <div>
+                            <dt>Fault code</dt>
+                            <dd>{a.fault_type.replaceAll("_", " ")}</dd>
+                          </div>
+                          <div>
+                            <dt>Class</dt>
+                            <dd>{a.event_class}</dd>
+                          </div>
+                          <div>
+                            <dt>Noticed</dt>
+                            <dd>{friendlyTime(a.alert_time_utc)}</dd>
+                          </div>
+                          <div>
+                            <dt>Confidence</dt>
+                            <dd>
+                              {confidenceLabel(a.confidence)} · {confPct}%
+                            </dd>
+                          </div>
+                          {a.true_fault_type && (
+                            <div>
+                              <dt>True fault</dt>
+                              <dd>{a.true_fault_type.replaceAll("_", " ")}</dd>
+                            </div>
+                          )}
+                        </dl>
+                        {a.evidence && (
+                          <p className="issue-evidence">
+                            <strong>Evidence:</strong> {a.evidence}
+                          </p>
+                        )}
+                        {a.recommended_action && (
+                          <p className="issue-action">
+                            <Icon name="check" size={14} /> {plainStep(a.recommended_action)}
+                          </p>
+                        )}
+                      </div>
+                    </details>
+                  );
+                })}
               </div>
-              <ol className="checklist">
-                {data.sop.map((step, i) => (
-                  <li key={step} className={done[step] ? "done" : ""}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={!!done[step]}
-                        onChange={(e) => setDone((d) => ({ ...d, [step]: e.target.checked }))}
-                      />
-                      <span className="step-num">{i + 1}</span>
-                      <span>{plainStep(step)}</span>
-                    </label>
-                  </li>
-                ))}
-              </ol>
-              {data.standby_asset_id && (
-                <p className="hint">
-                  Backup pump ready: <strong>{data.standby_asset_id}</strong>
-                </p>
-              )}
-              {data.sign_off && (
-                <p className="sign-off">
-                  <Icon name="check" size={14} /> Sign-off: {data.sign_off}
-                </p>
-              )}
-              <p className="hint">Ticking steps here is only for your tracking. This UI never writes to the pump controls.</p>
-            </section>
-          </div>
+            )}
 
-          {data.trends.length > 0 && (
-            <section className="card">
-              <h2>Sensor trends</h2>
-              <p className="hint">Discharge head, suction pressure, and motor power. The dashed line is the safe limit.</p>
-              <div className="trend-grid">
-                {data.trends.map((series) => (
-                  <Sparkline
-                    key={series.name}
-                    label={channelLabel(series.name)}
-                    unit={series.unit}
-                    values={series.points.map((p) => p.value)}
-                    threshold={series.threshold}
-                  />
-                ))}
-              </div>
-              {data.spectrum_note && (
-                <div className="spectrum-callout">
-                  <Icon name="warning" size={18} />
-                  <div>
-                    <strong>Vibration spectrum</strong>
-                    <p>
-                      Cavitation band highlighted at <strong>{data.spectrum_note}</strong> (matches housing acoustic
-                      resonance evidence).
-                    </p>
+            {data.trends.length > 0 && (
+              <details className="issue-section-acc">
+                <summary>Sensor trends</summary>
+                <p className="hint">Discharge head, suction pressure, and motor power. Dashed line = safe limit.</p>
+                <div className="trend-grid">
+                  {data.trends.map((series) => (
+                    <Sparkline
+                      key={series.name}
+                      label={channelLabel(series.name)}
+                      unit={series.unit}
+                      values={series.points.map((p) => p.value)}
+                      threshold={series.threshold}
+                    />
+                  ))}
+                </div>
+                {data.spectrum_note && (
+                  <div className="spectrum-callout">
+                    <Icon name="warning" size={18} />
+                    <div>
+                      <strong>Vibration spectrum</strong>
+                      <p>
+                        Cavitation band highlighted at <strong>{data.spectrum_note}</strong>.
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
-            </section>
-          )}
+                )}
+              </details>
+            )}
 
-          <details className="tech">
-            <summary>Technical details for engineers</summary>
-            <dl>
-              <div>
-                <dt>Model diagnosis</dt>
-                <dd>{data.diagnosis}</dd>
-              </div>
-              <div>
-                <dt>Event class</dt>
-                <dd>{data.event_class}</dd>
-              </div>
-              {alert && (
+            <details className="issue-section-acc tech">
+              <summary>Technical details for engineers</summary>
+              <dl>
                 <div>
-                  <dt>Fault code</dt>
-                  <dd>{alert.fault_type}</dd>
+                  <dt>Model diagnosis</dt>
+                  <dd>{data.diagnosis}</dd>
                 </div>
-              )}
-              {alert?.evidence && (
                 <div>
-                  <dt>Raw evidence</dt>
-                  <dd>{alert.evidence}</dd>
+                  <dt>Event class</dt>
+                  <dd>{data.event_class}</dd>
                 </div>
-              )}
-              {data.evidence.map((row) => (
-                <div key={row.channel}>
-                  <dt>{row.channel}</dt>
-                  <dd>
-                    {row.sigma > 0 ? "+" : ""}
-                    {row.sigma.toFixed(1)}σ · {row.note}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </details>
+                {alert && (
+                  <div>
+                    <dt>Fault code</dt>
+                    <dd>{alert.fault_type}</dd>
+                  </div>
+                )}
+                {alert?.evidence && (
+                  <div>
+                    <dt>Raw evidence</dt>
+                    <dd>{alert.evidence}</dd>
+                  </div>
+                )}
+                {data.evidence.map((row) => (
+                  <div key={row.channel}>
+                    <dt>{row.channel}</dt>
+                    <dd>
+                      {row.sigma > 0 ? "+" : ""}
+                      {row.sigma.toFixed(1)}σ · {row.note}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
+          </section>
         </div>
       ) : (
         <div className="tab-body" role="tabpanel">

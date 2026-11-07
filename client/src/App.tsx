@@ -221,6 +221,7 @@ export default function App() {
             assetId={selectedAsset}
             asset={selected}
             alert={selectedAlert}
+            assetAlerts={alerts.filter((a) => a.asset_id === selectedAsset)}
             mode={cockpitMode}
             onModeChange={setCockpitMode}
             onBack={() => setScreen("fleet")}
