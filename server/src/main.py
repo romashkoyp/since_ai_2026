@@ -26,6 +26,11 @@ from .sample_data import (
 )
 
 
+# Kaleb Routes
+# from retrofit_engine.router import router as retrofit_router
+# app.include_router(retrofit_router)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     # Logs "MongoDB: connected …" or "MongoDB: not connected …" via uvicorn.error
