@@ -14,18 +14,17 @@ The z-score cache (zf.parquet) is rebuilt automatically on the first run (~1 min
     python3 joice_physics_rules/generalisation_test.py "$PWD" downgrade   # same pumps with fewer sensors
     python3 joice_physics_rules/generalisation_test.py "$PWD" stress <stress_dir>   # unseen random pumps
 
-## Results (v3: + cavitation physics, valve physics, early physics alarms)
+## Results (v4: + fixed physics references for drift, in-minute noise check, stuck wireless sensor)
 | test | B1 composite | physics | B1 fault-type recall | physics |
 |---|---|---|---|---|
-| train (7 pumps) | 58.2 | 80.1 | 0.27 | 0.73 |
-| validation (2 pumps) | 78.0 | 83.0 | 0.44 | 0.78 |
-| validation downgraded to T1 | 72.3 | 80.8 | 0.25 | 0.75 |
-| validation downgraded to T0 | 38.5 | 46.8 | 0.00 | 0.33 |
-| stress seed 7 (6 unseen pumps) | 63.0 | 75.6 | 0.42 | 0.58 |
-| stress seed 11 (6 unseen pumps) | 47.8 | 62.6 | 0.32 | 0.53 |
-| stress seed 23 (6 unseen pumps) | 65.2 | 58.8 | 0.43 | 0.43 |
-Correct fault types, train + validation: B1 11/35, physics 26/35. Unseen stress pumps: B1 17/45, physics 23/45.
-Cavitation: B1 0/4, physics 4/4.
+| train (7 pumps) | 58.2 | 85.9 | 0.27 | 0.81 |
+| validation (2 pumps) | 78.0 | 95.8 | 0.44 | 0.89 |
+| validation downgraded to T1 | 72.3 | 95.2 | 0.25 | 0.88 |
+| validation downgraded to T0 | 38.5 | 59.6 | 0.00 | 0.50 |
+| 5 stress batches, 30 unseen pumps (avg) | 59.8 | 66.0 | 0.36 | 0.53 |
+Correct fault types, train + validation: B1 11/35, physics 29/35. Unseen pumps: B1 27/76, physics 40/76.
+Validation: every fault detected (event F1 1.0), zero false alerts.
+Weak spot: on unseen pumps physics raises slightly more false alerts (0.26 vs 0.19 per pump-day), mostly on batch-cycling process pumps.
 
 ## The physics, rule by rule
 1. **Warm-up.** Motor and bearing temperatures need ~2 h after a start (thermal time constant 20-40 min).
@@ -45,7 +44,14 @@ Cavitation: B1 0/4, physics 4/4.
 7. **Valve-controlled pumps.** The valve opening to hold flow while suction falls = clogging; valve opening with normal suction = restriction downstream.
 8. **Early physics alarms.** Bearing index crossing, cavitation and fast head loss raise an alarm even before any single sensor looks extreme. The same fault is never repeated within 12 h.
 9. **Old vibration vs new pressure change.** If 2x/1x vibration was already there and the pressures are what moves now, the hydraulics get diagnosed.
-10. **Weather.** Wave height >= 2.5 m with head loss = air drawn into the sea chest.
+10. **Drift needs a fixed reference.** B1 compares with the last 24 h, so a slow drift drags 'normal' along.
+    Motor current is checked against the physics line current = magnetising current + k x power (fitted on the first 6 h,
+    must be physical: no-load current 20-60 % of rated). Bearing temperature is checked against its normal offset above the water temperature.
+    Jump within 2 h = calibration shift, gradual = drift. Reported once, not repeated.
+11. **Look inside the minute.** Noise spikes vanish in the 1-min average but blow up the max-min range (x3-6). One channel's range > 2.5x its normal
+    in 5 of 15 minutes, others normal = noise spikes.
+12. **Stuck wireless sensor.** A healthy wireless bearing-temperature sensor never repeats the same value for more than ~1 h; > 2 h while running = stuck.
+13. **Weather.** Wave height >= 2.5 m with head loss = air drawn into the sea chest.
 
 ## Files
 * diag2.py - the rules (diagnose2) + B1-style alarm with warm-up suppression (detect)
