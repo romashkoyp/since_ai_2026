@@ -31,8 +31,10 @@ PUMP-04,2025-06-18T22:06:00Z,MACHINE,BEARING_WEAR,0.85,"vibration_rms_mm_s z=+21
 PUMP-04,2025-06-19T16:39:00Z,MACHINE,BEARING_WEAR,0.85,"vibration_rms_mm_s z=+34.2, vibration_accel_rms_g z=+31.3; bearing-defect index 4.19 (healthy ~0.1), crest z=-3.3",Plan bearing replacement; check lubrication.,IMBALANCE,False
 PUMP-04,2025-06-20T15:19:00Z,MACHINE,BEARING_WEAR,0.85,"vibration_rms_mm_s z=+61.8, vibration_accel_rms_g z=+51.8; bearing-defect index 4.25 (healthy ~0.1), crest z=-5.1",Plan bearing replacement; check lubrication.,DISCHARGE_RESTRICTION,False
 PUMP-04,2025-06-21T16:34:00Z,MACHINE,IMBALANCE,0.65,"vibration_rms_mm_s z=+44.3, flow_m3_h z=-17.3, motor_speed_rpm z=-14.1; 1x vibration x4.9",Inspect impeller for fouling; balance.,DISCHARGE_RESTRICTION,False
-PUMP-04,2025-06-22T04:34:00Z,SENSOR,SENSOR_NOISE_SPIKES,0.8,"vibration_rms_mm_s in-minute spread z=17, all other channels calm (<5)",Check cabling / grounding of vibration_rms_mm_s.,DISCHARGE_RESTRICTION,False
+PUMP-04,2025-06-22T04:34:00Z,MACHINE,DISCHARGE_RESTRICTION,0.75,"vibration_rms_mm_s in-minute spread z=17, all other channels calm (<5)",Check discharge valves and heat-exchanger fouling.,DISCHARGE_RESTRICTION,True
+PUMP-05,2026-01-19T01:09:00Z,MACHINE,IMPELLER_WEAR,0.5,head only 93% of datasheet rated head for 60 steady min,Performance test; inspect impeller / wear rings.,IMPELLER_WEAR,True
 PUMP-05,2026-01-21T09:30:00Z,SENSOR,SENSOR_STUCK,0.9,discharge_pressure_kpa frozen while pump running,Check transmitter discharge_pressure_kpa.,SENSOR_STUCK,True
+PUMP-06,2025-10-06T20:12:00Z,MACHINE,MISALIGNMENT,0.75,"vibration recording: 1x line x1.7, 2x line x3.9 vs start, two recordings in a row (twice-per-turn wobble = shaft misalignment)",Check coupling alignment.,MISALIGNMENT,True
 PUMP-06,2025-10-09T07:54:00Z,MACHINE,SUCTION_STRAINER_CLOGGING,0.75,suction_pressure_kpa z=-7.9; head -2% power +1% vs reference,Inspect / clean suction strainer.,SUCTION_STRAINER_CLOGGING,True
 PUMP-06,2025-10-09T21:40:00Z,MACHINE,CAVITATION,0.85,NPSH margin 1.02 < 1.15 for 10 min (water near boiling at inlet),Raise suction level / clean strainer / reduce flow.,CAVITATION,True
 PUMP-06,2025-10-09T21:54:00Z,MACHINE,SUCTION_STRAINER_CLOGGING,0.75,"suction_pressure_kpa z=-20.0, discharge_pressure_kpa z=-12.5; head -4% power -1% vs reference",Inspect / clean suction strainer.,CAVITATION,False
@@ -42,6 +44,7 @@ PUMP-06,2025-10-10T09:01:00Z,MACHINE,CAVITATION,0.85,NPSH margin 0.53 < 1.15 for
 PUMP-06,2025-10-10T09:15:00Z,MACHINE,CAVITATION,0.7,"suction_pressure_kpa z=-20.7, discharge_pressure_kpa z=-16.0; head -19% power -17% vs reference",Check suction strainer / level; reduce flow if allowed.,CAVITATION,True
 PUMP-06,2025-10-10T13:18:00Z,MACHINE,SUCTION_STRAINER_CLOGGING,0.75,suction_pressure_kpa z=-15.0; head +7% power -10% vs reference,Inspect / clean suction strainer.,SUCTION_STRAINER_CLOGGING,True
 PUMP-06,2025-10-10T17:27:00Z,MACHINE,CAVITATION,0.85,NPSH margin 0.49 < 1.15 for 10 min (water near boiling at inlet),Raise suction level / clean strainer / reduce flow.,CAVITATION,True
+PUMP-06,2025-10-12T11:40:00Z,SENSOR,SENSOR_DRIFT,0.65,"bearing temp +8.7 C above its normal offset to the water, but vibration and bearing index normal",Verify bearing temperature sensor.,SENSOR_DRIFT,True
 PUMP-07,2025-05-15T02:52:00Z,SENSOR,SENSOR_CALIBRATION_SHIFT,0.75,flow_m3_h deviates alone (z=-23.0),Verify flow_m3_h against a reference gauge; recalibrate.,SENSOR_CALIBRATION_SHIFT,True
 PUMP-07,2025-05-15T18:07:00Z,SENSOR,SENSOR_CALIBRATION_SHIFT,0.75,flow_m3_h deviates alone (z=-22.3),Verify flow_m3_h against a reference gauge; recalibrate.,SENSOR_CALIBRATION_SHIFT,True
 PUMP-07,2025-05-16T18:07:00Z,SENSOR,SENSOR_CALIBRATION_SHIFT,0.75,flow_m3_h deviates alone (z=-22.3),Verify flow_m3_h against a reference gauge; recalibrate.,SENSOR_CALIBRATION_SHIFT,True

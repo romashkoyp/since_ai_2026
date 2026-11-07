@@ -1,0 +1,21 @@
+{
+  "source": "simulated seed 100",
+  "pumps": 6,
+  "faults": 19,
+  "alerts": 19,
+  "faults_detected": 11,
+  "fault_type_correct": 8,
+  "score_physics": 70.3,
+  "score_baseline_B1": 55.2,
+  "false_alerts_per_pump_day": 0.0,
+  "physics_columns": {
+    "head_factor": "head_factor (1.0 = on pump curve)",
+    "head_change_vs_normal": "head_change_vs_normal",
+    "power_change_vs_normal": "power_change_vs_normal",
+    "npsh_margin": "npsh_margin (<1.15 = cavitation)",
+    "bearing_index": "bearing_index (~0.1 healthy, >0.6 damaged)",
+    "current_vs_power_error": "current_vs_power_error",
+    "bearing_temp_above_normal_C": "bearing_temp_above_normal_C",
+    "minutes_since_start": "minutes_since_start"
+  }
+}

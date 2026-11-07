@@ -1,0 +1,20 @@
+asset_id,alert_time_utc,event_class,fault_type,confidence,evidence,recommended_action,true_fault_type,correct
+STRESS-01,2025-10-11T08:46:00Z,SENSOR,COMMUNICATION_LOSS,0.95,missing rows,Check gateway / network; data gap.,COMMUNICATION_LOSS,True
+STRESS-01,2025-10-11T17:06:00Z,SENSOR,SENSOR_STUCK,0.9,motor_current_a frozen while pump running,Check transmitter motor_current_a.,SENSOR_CALIBRATION_SHIFT,False
+STRESS-01,2025-10-12T06:36:00Z,SENSOR,SENSOR_STUCK,0.9,motor_current_a frozen while pump running,Check transmitter motor_current_a.,DISCHARGE_RESTRICTION,False
+STRESS-01,2025-10-12T18:48:00Z,SENSOR,SENSOR_STUCK,0.9,motor_current_a frozen while pump running,Check transmitter motor_current_a.,DISCHARGE_RESTRICTION,False
+STRESS-01,2025-10-13T08:33:00Z,SENSOR,SENSOR_STUCK,0.9,motor_current_a frozen while pump running,Check transmitter motor_current_a.,SENSOR_DRIFT,False
+STRESS-01,2025-10-13T23:00:00Z,SENSOR,SENSOR_STUCK,0.9,motor_current_a frozen while pump running,Check transmitter motor_current_a.,SENSOR_CALIBRATION_SHIFT,False
+STRESS-02,2025-08-16T07:27:00Z,MACHINE,MISALIGNMENT,0.75,"vibration recording: 1x line x1.8, 2x line x5.7 vs start, two recordings in a row (twice-per-turn wobble = shaft misalignment)",Check coupling alignment.,MISALIGNMENT,True
+STRESS-02,2025-08-17T11:22:00Z,MACHINE,DISCHARGE_RESTRICTION,0.75,discharge_pressure_kpa z=+6.0; head +4% power -4% vs reference,Check discharge valves and heat-exchanger fouling.,DISCHARGE_RESTRICTION,True
+STRESS-03,2025-06-12T02:59:00Z,MACHINE,MISALIGNMENT,0.75,"vibration recording: 1x line x2.4, 2x line x6.9 vs start, two recordings in a row (twice-per-turn wobble = shaft misalignment)",Check coupling alignment.,MISALIGNMENT,True
+STRESS-03,2025-06-12T11:09:00Z,SENSOR,COMMUNICATION_LOSS,0.95,missing rows,Check gateway / network; data gap.,COMMUNICATION_LOSS,True
+STRESS-03,2025-06-12T13:12:00Z,SENSOR,SENSOR_STUCK,0.8,bearing temperature unchanged for 2.3 h while running (healthy < 1 h),Check wireless sensor / battery.,COMMUNICATION_LOSS,False
+STRESS-04,2025-10-20T00:45:00Z,MACHINE,SUCTION_STRAINER_CLOGGING,0.5,"motor_power_kw z=+7.2, motor_current_a z=+6.3; head -3% power +4% vs reference",Inspect / clean suction strainer.,SENSOR_NOISE_SPIKES,False
+STRESS-04,2025-10-20T10:25:00Z,SENSOR,SENSOR_CALIBRATION_SHIFT,0.7,"motor current +6.8% off the current-power line (healthy < 2.5%), sudden",Verify current transducer against a clamp meter.,IMBALANCE,False
+STRESS-04,2025-10-20T19:21:00Z,SENSOR,SENSOR_STUCK,0.9,discharge_pressure_kpa frozen while pump running,Check transmitter discharge_pressure_kpa.,SENSOR_STUCK,True
+STRESS-04,2025-10-21T02:57:00Z,MACHINE,SUCTION_STRAINER_CLOGGING,0.5,"motor_current_a z=+7.9, motor_power_kw z=+7.5; head -3% power +4% vs reference",Inspect / clean suction strainer.,IMBALANCE,False
+STRESS-04,2025-10-21T18:56:00Z,MACHINE,SUCTION_STRAINER_CLOGGING,0.5,"motor_power_kw z=+22.0, motor_current_a z=+19.9, motor_speed_rpm z=+11.3; head -10% power +15% vs reference",Inspect / clean suction strainer.,IMBALANCE,False
+STRESS-05,2025-08-09T11:33:00Z,SENSOR,SENSOR_STUCK,0.9,motor_current_a frozen while pump running,Check transmitter motor_current_a.,SENSOR_STUCK,True
+STRESS-06,2025-04-10T09:22:00Z,MACHINE,SUCTION_STRAINER_CLOGGING,0.65,discharge_pressure_kpa z=-6.7; head -4% power +2% vs reference,Inspect pump; cause unclear.,SENSOR_DRIFT,False
+STRESS-06,2025-04-10T21:22:00Z,MACHINE,IMPELLER_WEAR,0.4,"discharge_pressure_kpa z=-12.1, motor_current_a z=+7.8; head -8% power +5% vs reference; head only 97% of datasheet",Performance test; inspect impeller / wear rings.,SENSOR_DRIFT,False

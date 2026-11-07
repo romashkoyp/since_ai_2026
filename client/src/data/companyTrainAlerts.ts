@@ -1,6 +1,6 @@
 import type { AlertPrediction } from "../types/alerts";
 
-/** From joice_physics_rules/dashboard_data/company_train/alerts.csv */
+/** From joice_physics_rules/dashboard_data_fine_tuned/company_train/alerts.csv */
 export const COMPANY_TRAIN_ALERTS: AlertPrediction[] = [
   {
     "asset_id": "PUMP-01",
@@ -357,13 +357,24 @@ export const COMPANY_TRAIN_ALERTS: AlertPrediction[] = [
   {
     "asset_id": "PUMP-04",
     "alert_time_utc": "2025-06-22T04:34:00Z",
-    "event_class": "SENSOR",
-    "fault_type": "SENSOR_NOISE_SPIKES",
-    "confidence": 0.8,
+    "event_class": "MACHINE",
+    "fault_type": "DISCHARGE_RESTRICTION",
+    "confidence": 0.75,
     "evidence": "vibration_rms_mm_s in-minute spread z=17, all other channels calm (<5)",
-    "recommended_action": "Check cabling / grounding of vibration_rms_mm_s.",
+    "recommended_action": "Check discharge valves and heat-exchanger fouling.",
     "true_fault_type": "DISCHARGE_RESTRICTION",
-    "correct": false
+    "correct": true
+  },
+  {
+    "asset_id": "PUMP-05",
+    "alert_time_utc": "2026-01-19T01:09:00Z",
+    "event_class": "MACHINE",
+    "fault_type": "IMPELLER_WEAR",
+    "confidence": 0.5,
+    "evidence": "head only 93% of datasheet rated head for 60 steady min",
+    "recommended_action": "Performance test; inspect impeller / wear rings.",
+    "true_fault_type": "IMPELLER_WEAR",
+    "correct": true
   },
   {
     "asset_id": "PUMP-05",
@@ -374,6 +385,17 @@ export const COMPANY_TRAIN_ALERTS: AlertPrediction[] = [
     "evidence": "discharge_pressure_kpa frozen while pump running",
     "recommended_action": "Check transmitter discharge_pressure_kpa.",
     "true_fault_type": "SENSOR_STUCK",
+    "correct": true
+  },
+  {
+    "asset_id": "PUMP-06",
+    "alert_time_utc": "2025-10-06T20:12:00Z",
+    "event_class": "MACHINE",
+    "fault_type": "MISALIGNMENT",
+    "confidence": 0.75,
+    "evidence": "vibration recording: 1x line x1.7, 2x line x3.9 vs start, two recordings in a row (twice-per-turn wobble = shaft misalignment)",
+    "recommended_action": "Check coupling alignment.",
+    "true_fault_type": "MISALIGNMENT",
     "correct": true
   },
   {
@@ -476,6 +498,17 @@ export const COMPANY_TRAIN_ALERTS: AlertPrediction[] = [
     "correct": true
   },
   {
+    "asset_id": "PUMP-06",
+    "alert_time_utc": "2025-10-12T11:40:00Z",
+    "event_class": "SENSOR",
+    "fault_type": "SENSOR_DRIFT",
+    "confidence": 0.65,
+    "evidence": "bearing temp +8.7 C above its normal offset to the water, but vibration and bearing index normal",
+    "recommended_action": "Verify bearing temperature sensor.",
+    "true_fault_type": "SENSOR_DRIFT",
+    "correct": true
+  },
+  {
     "asset_id": "PUMP-07",
     "alert_time_utc": "2025-05-15T02:52:00Z",
     "event_class": "SENSOR",
@@ -539,28 +572,6 @@ export const COMPANY_TRAIN_ALERTS: AlertPrediction[] = [
     "evidence": "vibration_crest_factor z=+19.4; bearing-defect index 0.14 (healthy ~0.1), crest z=+19.4",
     "recommended_action": "Plan bearing replacement; check lubrication.",
     "true_fault_type": "BEARING_WEAR",
-    "correct": true
-  },
-  {
-    "asset_id": "PUMP-08",
-    "alert_time_utc": "2026-03-12T10:05:00Z",
-    "event_class": "MACHINE",
-    "fault_type": "CAVITATION",
-    "confidence": 0.89,
-    "evidence": "Suction Ps -3.8\u03c3; Housing Acoustic Resonance +4.3\u03c3 (2.6\u20133.0 kHz); Head vs Affinity -2.9\u03c3",
-    "recommended_action": "Derate to 88% immediately; transfer duty to Standby PUMP-07 at 04:00 UTC; backflush strainer",
-    "true_fault_type": "CAVITATION",
-    "correct": true
-  },
-  {
-    "asset_id": "PUMP-11",
-    "alert_time_utc": "2026-03-12T10:18:00Z",
-    "event_class": "MACHINE",
-    "fault_type": "CAVITATION",
-    "confidence": 0.84,
-    "evidence": "accel RMS spike with suction head drop",
-    "recommended_action": "Reduce speed setpoint; check suction level",
-    "true_fault_type": "CAVITATION",
     "correct": true
   }
 ];

@@ -1,5 +1,6 @@
 import type {
   AlertPrediction,
+  AlertSeverity,
   AssetStatus,
   CockpitResponse,
   FleetSummary,
@@ -22,8 +23,11 @@ export function fetchHealth(): Promise<HealthResponse> {
   return getJson<HealthResponse>("/health");
 }
 
-export function fetchAlerts(assetId?: string): Promise<AlertPrediction[]> {
-  const qs = assetId ? `?asset_id=${encodeURIComponent(assetId)}` : "";
+export function fetchAlerts(assetId?: string, severities: AlertSeverity[] = []): Promise<AlertPrediction[]> {
+  const params = new URLSearchParams();
+  if (assetId) params.set("asset_id", assetId);
+  for (const severity of severities) params.append("severity", severity);
+  const qs = params.size ? `?${params.toString()}` : "";
   return getJson<AlertPrediction[]>(`/api/alerts${qs}`);
 }
 

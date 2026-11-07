@@ -189,11 +189,11 @@ export function getDummyCockpit(assetId: string): CockpitResponse {
 }
 
 export const DUMMY_SCORECARD: ScorecardResponse = {
-  composite_score: 87.7,
-  event_f1: 0.94,
+  composite_score: 95.8,
+  event_f1: 1,
   precision: 1,
-  fault_type_recall: 0.778,
-  timeliness: 0.91,
+  fault_type_recall: 0.889,
+  timeliness: 0.928,
   false_alarms: 0,
   t0_vs_t1: [
     { capability: "Cavitation detection", t0: "No", t1: "Yes" },

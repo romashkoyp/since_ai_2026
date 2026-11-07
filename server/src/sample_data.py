@@ -11,6 +11,7 @@ from .models import (
     FaultType,
     FleetSummary,
     ScorecardResponse,
+    Severity,
     TrendPoint,
     TrendSeries,
 )
@@ -110,6 +111,7 @@ COCKPITS: dict[str, CockpitResponse] = {
         diagnosis="Suction strainer clogging / early cavitation",
         event_class=EventClass.MACHINE,
         confidence=0.89,
+        severity=Severity.SEVERE,
         safe_window="~24h at 88% speed · port ETA 18h",
         evidence=[
             EvidenceRow(channel="Suction pressure", sigma=-3.8, note="Below healthy envelope"),
@@ -141,6 +143,7 @@ COCKPITS: dict[str, CockpitResponse] = {
         diagnosis="Drive-end bearing wear (BPFO)",
         event_class=EventClass.MACHINE,
         confidence=0.91,
+        severity=Severity.SEVERE,
         safe_window="~68h remaining · schedule change-out",
         evidence=[
             EvidenceRow(channel="Bearing temp", sigma=3.1, note="Rising residual"),
@@ -169,11 +172,11 @@ COCKPITS: dict[str, CockpitResponse] = {
 }
 
 SCORECARD = ScorecardResponse(
-    composite_score=87.7,
-    event_f1=0.94,
+    composite_score=95.8,
+    event_f1=1.0,
     precision=1.0,
-    fault_type_recall=0.778,
-    timeliness=0.91,
+    fault_type_recall=0.889,
+    timeliness=0.928,
     false_alarms=0,
     t0_vs_t1=[
         {"capability": "Cavitation detection", "t0": "No", "t1": "Yes"},

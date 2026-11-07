@@ -5,7 +5,9 @@ from __future__ import annotations
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
+
+from .severity import Severity, categorize_alert
 
 
 class EventClass(str, Enum):
@@ -40,6 +42,12 @@ class AlertPrediction(BaseModel):
     recommended_action: Optional[str] = None
     true_fault_type: Optional[str] = None
     correct: Optional[bool] = None
+
+    @computed_field
+    @property
+    def severity(self) -> Severity:
+        """Derived API/UI band; never changes the detector's raw alert fields."""
+        return categorize_alert(self.event_class, self.fault_type, self.confidence)
 
 
 class AssetStatus(BaseModel):
@@ -91,6 +99,7 @@ class CockpitResponse(BaseModel):
     diagnosis: str
     event_class: EventClass
     confidence: float
+    severity: Optional[Severity] = None
     safe_window: str
     evidence: list[EvidenceRow]
     sop: list[str]

@@ -5,7 +5,7 @@ Frontend (**Client / UI Lead**) — React + TypeScript (Vite).
 ## Screens
 
 1. **Overview (fleet triage)** — health %, status filters, pump cards + actions  
-2. **Pump details (unified asset cockpit)** — docs Screen 2: diagnosis, evidence, SOP/sign-off, trends/spectrum, mitigation simulator (NPSH / risk / energy / cooling margin)  
+2. **Pump details (unified asset cockpit)** — docs Screen 2: diagnosis, evidence, SOP/sign-off, trends/spectrum, mitigation simulator (NPSH / risk / energy / cooling margin); alert triage defaults to **Moderate + Severe**, with toggles for **Minimal** and **Low confidence** (`UNKNOWN`)
 3. **Savings & value (scorecard)** — T0 vs T1, benchmark %, BOM, payback  
 
 Demo cockpit numbers for **PUMP-08** follow `docs/ui_images/screen2_unified_asset_cockpit.jpg` / `docs/ui_description.md`.  

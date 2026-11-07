@@ -62,6 +62,11 @@
         "recommended_action": {
           "type": ["string", "null"],
           "description": "Human-reviewable recommendation (inspection, maintenance, sensor check)."
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["SEVERE", "MODERATE", "MINIMAL", "LOW_CONFIDENCE"],
+          "description": "Optional API/UI triage band derived by the server: MACHINE confidence >=0.75 is SEVERE, other alerts >=0.50 are MODERATE, lower-confidence alerts are MINIMAL, and fault_type UNKNOWN is LOW_CONFIDENCE. Not required in benchmark CSV submissions."
         }
       },
       "additionalProperties": false
