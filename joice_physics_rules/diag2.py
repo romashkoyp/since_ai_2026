@@ -254,7 +254,44 @@ def detect(zp, assets, k=6.0, persist=15):
         if x["fault_type"] != "CAVITATION" and key in last and t - last[key] < B.REFRACTORY:
             continue
         last[key] = t; keep.append(x)
-    return pd.DataFrame(keep, columns=B._COLS)
+    al = pd.DataFrame(keep, columns=B._COLS)
+    return _post_relabel(al, zp, ctl, k)
+
+def _post_relabel(al, zp, ctl, k=6.0):
+    """Refractory-preserving physics tie-breakers applied after suppression rhythm is fixed."""
+    if not len(al): return al
+    al = al.copy()
+    nz = lambda v: 0.0 if v is None or pd.isna(v) else float(v)
+    for idx, row in al.iterrows():
+        ft, a = row["fault_type"], row["asset_id"]
+        if ft == "SENSOR_NOISE_SPIKES" and any(vch in str(row["evidence"]) for vch in ("vibration_rms_mm_s", "vibration_accel_rms_g", "vibration_crest_factor")):
+            t = pd.Timestamp(row["alert_time_utc"]) - pd.Timedelta(minutes=1)
+            m = zp[(zp.asset_id == a) & (zp.window_start_utc == t)]
+            if len(m):
+                r = m.iloc[0]
+                if nz(r.get("ph_dH")) > 0.04 and nz(r.get("ph_dP")) < -0.03:
+                    al.at[idx, "event_class"] = "MACHINE"
+                    al.at[idx, "fault_type"] = "DISCHARGE_RESTRICTION"
+                    al.at[idx, "confidence"] = 0.75
+                    al.at[idx, "recommended_action"] = "Check discharge valves and heat-exchanger fouling."
+        elif ft == "UNKNOWN":
+            t = pd.Timestamp(row["alert_time_utc"]) - pd.Timedelta(minutes=1)
+            m = zp[(zp.asset_id == a) & (zp.window_start_utc == t)]
+            if len(m):
+                r = m.iloc[0]
+                zpd, zi, zpw = nz(r.get("z_pd")), nz(r.get("z_i")), nz(r.get("z_pw"))
+                dH = nz(r.get("ph_dH"))
+                hyd = max(abs(nz(r.get("z_" + c))) for c in ("ps", "pd", "q", "n", "pw"))
+                if hyd < k / 2:
+                    al.at[idx, "fault_type"] = "BEARING_WEAR"
+                    al.at[idx, "confidence"] = 0.65
+                elif zpd < -k / 2 and zi > 0:
+                    al.at[idx, "fault_type"] = "SUCTION_STRAINER_CLOGGING"
+                    al.at[idx, "confidence"] = 0.65
+                elif (ctl.get(a) == "VFD_PRESSURE" and zpw < -k / 2 and zi < -k / 2) or (zpd > k / 2 and dH >= 0.04):
+                    al.at[idx, "fault_type"] = "DISCHARGE_RESTRICTION"
+                    al.at[idx, "confidence"] = 0.65
+    return al
 
 def physics_alerts(zp, existing, k, ctl, hold=10):
     """Alerts fired by physics even when no single z-score is extreme:
@@ -264,12 +301,20 @@ def physics_alerts(zp, existing, k, ctl, hold=10):
     for x in existing: ex.setdefault(x["asset_id"], []).append(pd.Timestamp(x["alert_time_utc"]))
     for a, g in zp.groupby("asset_id", sort=False):
         g = g.reset_index(drop=True)
+        ts_arr = list(g["window_start_utc"])
         run = g["operating_mode"].eq("RUNNING").values
+        steady = g["steady"].values
         sig = g["ph_sigma"].values if "ph_sigma" in g else np.full(len(g), np.nan)
         bidx = g["b_idx"].values if "b_idx" in g else np.full(len(g), np.nan)
         rbx = g["r_bidx"].values if "r_bidx" in g else np.full(len(g), np.nan)
         dfh = g["ph_dfH"].values if "ph_dfH" in g else np.full(len(g), np.nan)
-        cav_n = 0; in_ep = False; brg_done = False; hl_n = 0; last_hl = None
+        ht = g["ph_Ht"].values if "ph_Ht" in g else np.full(len(g), np.nan)
+        zi_arr = np.nan_to_num(g["z_i"].values, nan=0.0) if "z_i" in g else np.zeros(len(g))
+        zps_arr = np.nan_to_num(g["z_ps"].values, nan=0.0) if "z_ps" in g else np.zeros(len(g))
+        zv_abs = np.abs(np.nan_to_num(g["z_v"].values, nan=0.0)) if "z_v" in g else np.zeros(len(g))
+        za_abs = np.abs(np.nan_to_num(g["z_a"].values, nan=0.0)) if "z_a" in g else np.zeros(len(g))
+        has_fh_col = bool(g["ph_fH"].notna().any()) if "ph_fH" in g else False
+        cav_n = 0; in_ep = False; brg_done = False; hl_n = 0; last_hl = None; ht_n = 0; ht_done = False
         # vibration recordings (every ~4 h): 2x line = misalignment, 1x line = imbalance
         r1s = g["r_1x"].values if "r_1x" in g else np.full(len(g), np.nan)
         r2s = g["r_2x"].values if "r_2x" in g else np.full(len(g), np.nan)
@@ -285,7 +330,7 @@ def physics_alerts(zp, existing, k, ctl, hold=10):
             if key in last_sens and (once or t - last_sens[key] < B.REFRACTORY): return False
             last_sens[key] = t; return True
         for j in range(len(g)):
-            t = g["window_start_utc"].iloc[j] + pd.Timedelta(minutes=1)
+            t = ts_arr[j] + pd.Timedelta(minutes=1)
             near = any(abs((t - e).total_seconds()) < 600 for e in ex.get(a, []))
             fire = None
             low = run[j] and not np.isnan(sig[j]) and sig[j] < 1.15
@@ -297,14 +342,20 @@ def physics_alerts(zp, existing, k, ctl, hold=10):
             if not brg_done and not np.isnan(bidx[j]) and (bidx[j] > 0.6 or (bidx[j] > 0.25 and rbx[j] > 3)):
                 brg_done = True
                 fire = fire or ("BEARING_WEAR", 0.8, f"bearing-defect index {bidx[j]:.2f} (healthy ~0.1, x{rbx[j]:.1f} vs start)", "Plan bearing replacement; check lubrication.")
-            hl = run[j] and g["steady"].iloc[j] and not np.isnan(dfh[j]) and dfh[j] < -0.05
+            hl = run[j] and steady[j] and not np.isnan(dfh[j]) and dfh[j] < -0.05
             hl_n = hl_n + 1 if hl else 0
             if hl_n == 30 and (last_hl is None or t - last_hl > B.REFRACTORY):
                 last_hl = t
                 fire = fire or ("IMPELLER_WEAR", 0.5, f"head factor {dfh[j]*100:.0f}% below own normal for 30 min", "Performance test; inspect impeller / wear rings.")
-            # --- vibration recording rule: same verdict on two recordings in a row
+            if not has_fh_col and ctl.get(a) == "FIXED_SPEED" and not ht_done:
+                ht_low = run[j] and steady[j] and not np.isnan(ht[j]) and ht[j] < 0.94 and zi_arr[j] <= k / 2 and zps_arr[j] > -k / 2
+                ht_n = ht_n + 1 if ht_low else 0
+                if ht_n == 60:
+                    ht_done = True
+                    fire = fire or ("IMPELLER_WEAR", 0.5, f"head only {ht[j]*100:.0f}% of datasheet rated head for 60 steady min", "Performance test; inspect impeller / wear rings.")
+            # --- vibration recording rule: same verdict on two recordings in a row (for subtle T1/untriggered vibration)
             if j > 0 and not np.isnan(r2s[j]) and (r2s[j] != r2s[j - 1] or r1s[j] != r1s[j - 1]):
-                v = "MISALIGNMENT" if r2s[j] > 3.5 else ("IMBALANCE" if (r1s[j] > 2.5 and r2s[j] < 1.5) else None)
+                v = ("MISALIGNMENT" if r2s[j] > 3.5 else ("IMBALANCE" if (r1s[j] > 2.5 and r2s[j] < 1.5) else None)) if za_abs[j] < k else None
                 snap_hist.append(v); snap_hist[:] = snap_hist[-2:]
                 if v and snap_hist == [v, v] and run[j] and not fire and v not in vib_done:
                     vib_done[v] = t
@@ -329,7 +380,7 @@ def physics_alerts(zp, existing, k, ctl, hold=10):
                 fire = ("SENSOR_CALIBRATION_SHIFT" if step else "SENSOR_DRIFT", 0.7,
                         f"motor current {ipr[j]*100:+.1f}% off the current-power line (healthy < 2.5%), {'sudden' if step else 'gradual'}",
                         "Verify current transducer against a clamp meter.")
-            vib_ok = (np.isnan(bidx[j]) or bidx[j] < 0.25) and abs(g["z_v"].iloc[j] if not pd.isna(g["z_v"].iloc[j]) else 0) < k / 2
+            vib_ok = (np.isnan(bidx[j]) or bidx[j] < 0.25) and zv_abs[j] < k and za_abs[j] < k / 2
             bt_n = bt_n + 1 if (not np.isnan(btd[j]) and btd[j] > 6 and vib_ok) else 0
             if bt_n == 60 and not fire and sens_ok("bt", t, once=True):
                 fire = ("SENSOR_DRIFT", 0.65, f"bearing temp {btd[j]:+.1f} C above its normal offset to the water, but vibration and bearing index normal", "Verify bearing temperature sensor.")
@@ -337,7 +388,7 @@ def physics_alerts(zp, existing, k, ctl, hold=10):
                 fire = ("SENSOR_STUCK", 0.8, f"bearing temperature unchanged for {bts[j]:.1f} h while running (healthy < 1 h)", "Check wireless sensor / battery.")
             if fire and not near:
                 cls, ft = ("SENSOR" if fire[0].startswith("SENSOR") else "MACHINE"), fire[0]
-                if ft == "IMPELLER_WEAR":           # let the full rule set name the head loss (air / cavitation / wear)
+                if ft == "IMPELLER_WEAR" and has_fh_col:           # let the full rule set name the head loss (air / cavitation / wear)
                     cls, ft, c, e2, act = diagnose2(g, j, k, ctl.get(a))
                     if ft == "UNKNOWN": ft, c, e2, act = fire[0], fire[1], fire[2], fire[3]
                     fire = (ft, c, e2, act)

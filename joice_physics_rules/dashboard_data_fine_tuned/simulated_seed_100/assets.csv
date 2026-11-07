@@ -1,0 +1,7 @@
+asset_id,split,site,system,profile,control,instrumentation_tier,pump_rated_flow_m3_h,pump_rated_head_m,motor_rated_kw,motor_rated_rpm,fluid,window_start_utc,window_end_utc
+STRESS-01,stress,Stress-test site (fictional),Process Transfer pump,PROCESS_TRANSFER,FLOW_VALVE,T0_LEGACY,67,39.3,15,2930,Hot process water,2025-10-11T00:00:00Z,2025-10-14T00:00:00Z
+STRESS-02,stress,Stress-test site (fictional),Ship Lt Freshwater pump,SHIP_LT_FRESHWATER,FIXED_SPEED,T1_RETROFIT,330,31.2,45,1775,Treated fresh water (closed loop),2025-08-15T00:00:00Z,2025-08-18T00:00:00Z
+STRESS-03,stress,Stress-test site (fictional),Process Transfer pump,PROCESS_TRANSFER,FLOW_VALVE,T1_RETROFIT,68,46.8,15,2930,Hot process water,2025-06-11T00:00:00Z,2025-06-14T00:00:00Z
+STRESS-04,stress,Stress-test site (fictional),Industrial Cw pump,INDUSTRIAL_CW,VFD_PRESSURE,T0_LEGACY,230,30.2,30,1480,Cooling-tower water,2025-10-19T00:00:00Z,2025-10-22T00:00:00Z
+STRESS-05,stress,Stress-test site (fictional),Ship Lt Freshwater pump,SHIP_LT_FRESHWATER,FIXED_SPEED,T0_LEGACY,300,34.4,45,1780,Treated fresh water (closed loop),2025-08-09T00:00:00Z,2025-08-12T00:00:00Z
+STRESS-06,stress,Stress-test site (fictional),Ship Sw Cooling pump,SHIP_SW_COOLING,FIXED_SPEED,T0_LEGACY,510,29.0,75,1785,"Seawater (brackish, ~6 PSU)",2025-04-08T00:00:00Z,2025-04-11T00:00:00Z
