@@ -25,7 +25,7 @@ def vib_features(snap, assets):
         env = np.abs(hilbert(sosfiltfilt(butter(4, [2000, 3600], btype="band", fs=fs, output="sos"), x))); env -= env.mean()
         es = np.abs(np.fft.rfft(env * win)) * 2 / win.sum(); sp = np.abs(np.fft.rfft(x * win)) * 2 / win.sum()
         fr = np.fft.rfftfreq(len(x), 1 / fs)
-        amp = lambda S, f: float(S[(fr > f * .97) & (fr < f * 1.03)].max())
+        amp = lambda S, f: (float(S[(fr > f * .97) & (fr < f * 1.03)].max()) if ((fr > f * .97) & (fr < f * 1.03)).any() else float("nan"))  # pump stopped -> no line
         rows.append(dict(asset_id=s.asset_id, time=s.timestamp_utc, a_1x=amp(sp, f1), a_2x=amp(sp, 2 * f1),
                          env_bpfo=amp(es, a.bearing_bpfo_order * f1),
                          hf_rms=float(np.sqrt(np.mean(sosfiltfilt(butter(4, 4000, btype="high", fs=fs, output="sos"), x) ** 2)))))

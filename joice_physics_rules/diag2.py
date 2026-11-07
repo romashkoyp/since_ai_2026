@@ -270,6 +270,10 @@ def physics_alerts(zp, existing, k, ctl, hold=10):
         rbx = g["r_bidx"].values if "r_bidx" in g else np.full(len(g), np.nan)
         dfh = g["ph_dfH"].values if "ph_dfH" in g else np.full(len(g), np.nan)
         cav_n = 0; in_ep = False; brg_done = False; hl_n = 0; last_hl = None
+        # vibration recordings (every ~4 h): 2x line = misalignment, 1x line = imbalance
+        r1s = g["r_1x"].values if "r_1x" in g else np.full(len(g), np.nan)
+        r2s = g["r_2x"].values if "r_2x" in g else np.full(len(g), np.nan)
+        snap_hist = []; vib_done = {}
         rr_cols = [c for c in g.columns if c.startswith("ph_rr_")]
         RR = g[rr_cols].values if rr_cols else np.zeros((len(g), 0))
         spike_hist = {}; last_sens = {}
@@ -298,6 +302,15 @@ def physics_alerts(zp, existing, k, ctl, hold=10):
             if hl_n == 30 and (last_hl is None or t - last_hl > B.REFRACTORY):
                 last_hl = t
                 fire = fire or ("IMPELLER_WEAR", 0.5, f"head factor {dfh[j]*100:.0f}% below own normal for 30 min", "Performance test; inspect impeller / wear rings.")
+            # --- vibration recording rule: same verdict on two recordings in a row
+            if j > 0 and not np.isnan(r2s[j]) and (r2s[j] != r2s[j - 1] or r1s[j] != r1s[j - 1]):
+                v = "MISALIGNMENT" if r2s[j] > 3.5 else ("IMBALANCE" if (r1s[j] > 2.5 and r2s[j] < 1.5) else None)
+                snap_hist.append(v); snap_hist[:] = snap_hist[-2:]
+                if v and snap_hist == [v, v] and run[j] and not fire and v not in vib_done:
+                    vib_done[v] = t
+                    fire = (v, 0.75, f"vibration recording: 1x line x{r1s[j]:.1f}, 2x line x{r2s[j]:.1f} vs start, two recordings in a row "
+                            + ("(twice-per-turn wobble = shaft misalignment)" if v == "MISALIGNMENT" else "(once-per-turn wobble = imbalance)"),
+                            "Check coupling alignment." if v == "MISALIGNMENT" else "Inspect impeller for fouling; balance.")
             # --- STEP 2: noise spikes = ONE channel's in-minute range explodes, the others stay normal
             if run[j] and RR.shape[1]:
                 row = RR[j]; big = [i for i, v in enumerate(row) if not np.isnan(v) and v > 2.5]
