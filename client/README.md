@@ -4,9 +4,12 @@ Frontend (**Client / UI Lead**) — React + TypeScript (Vite).
 
 ## Screens
 
-1. **Fleet triage** — 12-pump matrix, summary KPIs, open alerts  
-2. **Asset cockpit** — diagnosis, evidence, SOP, sparklines, what-if derate  
-3. **Retrofit scorecard** — T0 vs T1, benchmark, BOM, payback  
+1. **Overview (fleet triage)** — health %, status filters, pump cards + actions  
+2. **Pump details (unified asset cockpit)** — docs Screen 2: diagnosis, evidence, SOP/sign-off, trends/spectrum, mitigation simulator (NPSH / risk / energy / cooling margin)  
+3. **Savings & value (scorecard)** — T0 vs T1, benchmark %, BOM, payback  
+
+Demo cockpit numbers for **PUMP-08** follow `docs/ui_images/screen2_unified_asset_cockpit.jpg` / `docs/ui_description.md`.  
+
 
 Data from FastAPI: `/api/assets`, `/api/fleet/summary`, `/api/cockpit/{id}`, `/api/scorecard`, `/api/alerts`.
 

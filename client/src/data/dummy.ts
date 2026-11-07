@@ -1,10 +1,13 @@
 import type {
-  AlertPrediction,
   AssetStatus,
   CockpitResponse,
   FleetSummary,
   ScorecardResponse,
 } from "../types/alerts";
+import { COMPANY_TRAIN_ALERTS } from "./companyTrainAlerts";
+
+/** Physics detector alerts (company train) + a few Screen-2 demo rows */
+export const DUMMY_ALERTS = COMPANY_TRAIN_ALERTS;
 
 export const DUMMY_SUMMARY: FleetSummary = {
   vessel: "M/V Borealis Voyager · Fleet overview",
@@ -33,71 +36,23 @@ export const DUMMY_ASSETS: AssetStatus[] = [
   { asset_id: "PUMP-12", site: "Vessel C", system: "Transfer", tier: "T0", status: "healthy", mode: "STANDBY", load_pct: 0, open_alerts: 0 },
 ];
 
-export const DUMMY_ALERTS: AlertPrediction[] = [
-  {
-    asset_id: "PUMP-04",
-    alert_time_utc: "2026-03-12T08:14:00Z",
-    event_class: "MACHINE",
-    fault_type: "BEARING_WEAR",
-    confidence: 0.91,
-    evidence: "bearing_temp residual + crest factor rise; BPFO elevated",
-    recommended_action: "Inspect DE bearing; plan replacement within 48h",
-  },
-  {
-    asset_id: "PUMP-06",
-    alert_time_utc: "2026-03-12T09:02:30Z",
-    event_class: "MACHINE",
-    fault_type: "SUCTION_STRAINER_CLOGGING",
-    confidence: 0.87,
-    evidence: "suction pressure drop with stable discharge",
-    recommended_action: "Clean suction strainer; verify NPSH margin",
-  },
-  {
-    asset_id: "PUMP-02",
-    alert_time_utc: "2026-03-12T07:41:00Z",
-    event_class: "SENSOR",
-    fault_type: "SENSOR_DRIFT",
-    confidence: 0.78,
-    evidence: "vibration channel slope vs coupled channels stable",
-    recommended_action: "Calibrate sensor; mask channel for machine checks",
-  },
-  {
-    asset_id: "PUMP-08",
-    alert_time_utc: "2026-03-12T10:05:00Z",
-    event_class: "MACHINE",
-    fault_type: "CAVITATION",
-    confidence: 0.89,
-    evidence: "suction -3.8σ; 2.6–3.0 kHz cavitation band",
-    recommended_action: "Derate to 88% speed; clean strainer at port",
-  },
-  {
-    asset_id: "PUMP-11",
-    alert_time_utc: "2026-03-12T10:18:00Z",
-    event_class: "MACHINE",
-    fault_type: "CAVITATION",
-    confidence: 0.84,
-    evidence: "accel RMS spike with suction head drop",
-    recommended_action: "Reduce speed setpoint; check suction level",
-  },
-];
-
+/** Screen 2 mock — docs/ui_images/screen2_unified_asset_cockpit.jpg */
 const COCKPIT_08: CockpitResponse = {
   asset_id: "PUMP-08",
   title: "LT Main Cooling Pump",
-  diagnosis: "Suction strainer clogging / early cavitation",
+  diagnosis: "Suction strainer clogging / cavitation",
   event_class: "MACHINE",
   confidence: 0.89,
-  safe_window: "~24h at 88% speed · port ETA 18h",
+  safe_window: "Safe window ~24h at 88% speed · Port arrival ETA: 18h",
   evidence: [
-    { channel: "Suction pressure", sigma: -3.8, note: "Below healthy envelope" },
-    { channel: "Acoustic resonance", sigma: 4.3, note: "2.6–3.0 kHz band" },
-    { channel: "Head vs affinity", sigma: -2.9, note: "Curve left of BEP" },
+    { channel: "Suction Ps", sigma: -3.8, note: "Below healthy envelope" },
+    { channel: "Housing Acoustic Resonance", sigma: 4.3, note: "2.6–3.0 kHz cavitation band" },
+    { channel: "Head vs Affinity", sigma: -2.9, note: "Operating left of BEP" },
   ],
   sop: [
-    "Derate VFD to 88% immediately",
-    "Confirm standby pump ready",
-    "Schedule strainer clean at next port",
-    "Do not write setpoints from this UI (read-only)",
+    "Derate to 88% immediately",
+    "Transfer duty to Standby PUMP-07 at 04:00 UTC",
+    "Backflush strainer",
   ],
   trends: [
     {
@@ -126,6 +81,12 @@ const COCKPIT_08: CockpitResponse = {
   risk_at_88: 0.14,
   energy_delta_eur_day: -34.2,
   cooling_margin_pct: 106,
+  sign_off: "Ch. Eng. Virtanen · CMMS #5892 · Verified",
+  port_eta_hours: 18,
+  standby_asset_id: "PUMP-07",
+  cooling_safe_flow_m3h: 312,
+  spectrum_note: "2.6–3.0 kHz cavitation resonance",
+  rated_rpm: 1800,
 };
 
 const COCKPIT_04: CockpitResponse = {

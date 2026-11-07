@@ -26,6 +26,10 @@ export interface AlertPrediction {
   confidence: number;
   evidence?: string | null;
   recommended_action?: string | null;
+  /** Ground-truth fault when available (physics dashboard export) */
+  true_fault_type?: string | null;
+  /** Whether predicted fault_type matched ground truth */
+  correct?: boolean | null;
 }
 
 export interface AssetStatus {
@@ -88,6 +92,13 @@ export interface CockpitResponse {
   risk_at_88: number;
   energy_delta_eur_day: number;
   cooling_margin_pct: number;
+  /** Optional docs/demo fields (Screen 2 cockpit mock) */
+  sign_off?: string | null;
+  port_eta_hours?: number | null;
+  standby_asset_id?: string | null;
+  cooling_safe_flow_m3h?: number | null;
+  spectrum_note?: string | null;
+  rated_rpm?: number | null;
 }
 
 export interface ScorecardResponse {

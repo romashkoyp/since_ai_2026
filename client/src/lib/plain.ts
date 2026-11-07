@@ -155,9 +155,11 @@ export function confidenceLabel(confidence: number): string {
 
 const CHANNELS: Record<string, string> = {
   "suction pressure": "Water pressure at the inlet",
+  "suction ps": "Water pressure at the inlet",
   "acoustic resonance": "Noise inside the pump",
-  "head vs affinity": "Pumping strength",
-  "discharge head": "Pumping strength",
+  "housing acoustic resonance": "Noise inside the pump housing",
+  "head vs affinity": "Pumping strength vs expected curve",
+  "discharge head": "Discharge head (pumping strength)",
   "bearing temp": "Bearing temperature",
   "crest factor": "Knocking / impacts",
   "bpfo band": "Bearing vibration pattern",
@@ -173,6 +175,8 @@ export function channelLabel(channel: string): string {
 const STEP_PHRASES: [RegExp, string][] = [
   [/\bderate (the )?vfd to\b/i, "Slow the pump down to"],
   [/\bderate to\b/i, "Slow the pump down to"],
+  [/\btransfer duty to standby\b/i, "Switch the job to backup"],
+  [/\bbackflush strainer\b/i, "Flush the intake filter clean"],
   [/\bvfd\b/gi, "speed controller"],
   [/\bstrainer\b/gi, "intake filter"],
   [/\bDE bearing\b/g, "main bearing"],

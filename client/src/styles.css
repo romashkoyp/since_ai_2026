@@ -230,6 +230,54 @@ p {
   cursor: progress;
 }
 
+.icon-btn.active {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.help-wrap {
+  position: relative;
+}
+
+.help-popover {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 20;
+  width: min(360px, calc(100vw - 2rem));
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.help-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.help-popover ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+
+.help-popover li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
 .page {
   flex: 1;
   width: 100%;
@@ -859,7 +907,7 @@ p {
 }
 
 .legend {
-  margin-top: 2rem;
+  margin: 1rem 0 0;
   padding: 1rem 1.25rem;
   border-radius: var(--radius);
   background: var(--surface);
@@ -1090,6 +1138,284 @@ p {
 .sign.lvl-high div:first-child span {
   color: var(--danger);
   font-weight: 600;
+}
+
+.sign-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.sign-off {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 1rem 0 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.spectrum-callout {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line));
+  background: var(--warn-soft);
+  color: var(--ink-2);
+  font-size: 0.92rem;
+}
+
+.spectrum-callout strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--warn);
+}
+
+.spectrum-callout p {
+  margin: 0;
+}
+
+.cooling-bar {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.cooling-bar-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.cooling-bar-head small {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.diagnose-panel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.issue-legend {
+  margin: 0;
+}
+
+.issue-accordion {
+  display: grid;
+  gap: 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.issue-acc {
+  border-bottom: 1px solid var(--line);
+}
+
+.issue-acc:last-child {
+  border-bottom: 0;
+}
+
+.issue-acc.verdict-pass {
+  border-left: 3px solid var(--ok);
+}
+
+.issue-acc.verdict-fail {
+  border-left: 3px solid var(--danger);
+}
+
+.issue-acc.verdict-unknown {
+  border-left: 3px solid var(--line);
+}
+
+.issue-acc-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.55rem 0.75rem;
+  padding: 0.7rem 0.85rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.issue-acc-summary::-webkit-details-marker {
+  display: none;
+}
+
+.issue-acc-chevron {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+  margin-left: 0.15rem;
+}
+
+.issue-acc[open] > .issue-acc-summary .issue-acc-chevron {
+  transform: rotate(45deg);
+}
+
+.issue-acc-title {
+  font-weight: 650;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.issue-acc-conf {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 5.5rem;
+  justify-content: flex-end;
+}
+
+.issue-acc-conf strong {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+}
+
+.issue-acc-meter {
+  width: 3.25rem;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.issue-acc-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+}
+
+.issue-acc-body {
+  padding: 0 0.85rem 0.85rem 1.85rem;
+  display: grid;
+  gap: 0.55rem;
+  border-top: 1px dashed var(--line);
+  margin-top: 0;
+  padding-top: 0.75rem;
+}
+
+.issue-acc-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.55rem 1rem;
+  margin: 0;
+}
+
+.issue-acc-meta div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.issue-acc-meta dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.issue-acc-meta dd {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--ink-2);
+}
+
+.issue-evidence {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.issue-action {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--ok);
+}
+
+.verdict-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.verdict-badge.pass {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.verdict-badge.fail {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.verdict-badge.unknown {
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+.issue-section-acc {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  padding: 0.15rem 0;
+}
+
+.issue-section-acc > summary {
+  cursor: pointer;
+  padding: 0.7rem 0.9rem;
+  font-weight: 650;
+  list-style: none;
+}
+
+.issue-section-acc > summary::-webkit-details-marker {
+  display: none;
+}
+
+.issue-section-acc > :not(summary) {
+  padding: 0 0.9rem 0.9rem;
+}
+
+@media (max-width: 640px) {
+  .issue-acc-summary {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .issue-acc-conf {
+    grid-column: 2 / -1;
+    justify-content: flex-start;
+    min-width: 0;
+  }
 }
 
 .progress-pill {
