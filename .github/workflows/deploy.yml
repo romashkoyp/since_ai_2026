@@ -168,6 +168,7 @@ jobs:
               -p 8000:8000 \
               -e "CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}" \
               -e "MONGODB_URI=${{ secrets.MONGODB_URI }}" \
+              -e "MAX_UPLOAD_MB=${{ vars.MAX_UPLOAD_MB || '5' }}" \
               since-ai-server:latest
             docker image prune -f
 
