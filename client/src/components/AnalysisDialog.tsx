@@ -48,6 +48,7 @@ const FIELDS: FieldSpec[] = [
 type Files = Partial<Record<AnalysisFileField, File>>;
 
 const MB = 1_000_000; // decimal units, as macOS Finder / Windows Explorer show file sizes (and the server limit)
+const DEFAULT_MAX_MB = 15; // used until /api/model reports the server's MAX_UPLOAD_MB
 
 /** Human-readable size: 553 bytes · 12 KB · 6.6 MB · 1.2 GB */
 function formatSize(bytes: number): string {
@@ -64,9 +65,26 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
   const [files, setFiles] = useState<Files>({});
   const [useMl, setUseMl] = useState(true);
   const [running, setRunning] = useState(false);
+  /** uploading -> queued -> running (server side) */
+  const [phase, setPhase] = useState<"uploading" | "queued" | "running">("uploading");
+  const [startedAt, setStartedAt] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisRun | null>(null);
   const [formKey, setFormKey] = useState(0);
+  /** bumping a field's key re-creates its <input type=file>, which is the only way to clear a file input */
+  const [inputKeys, setInputKeys] = useState<Partial<Record<AnalysisFileField, number>>>({});
+
+  function removeFile(field: AnalysisFileField) {
+    setFiles((prev) => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+    setInputKeys((prev) => ({ ...prev, [field]: (prev[field] ?? 0) + 1 }));
+    setResult(null);
+    setError(null);
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -88,7 +106,15 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const maxBytes = (model?.max_upload_mb ?? Infinity) * MB;
+  // seconds counter while a run is in progress
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(() => setElapsed(Math.round((Date.now() - startedAt) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, [running, startedAt]);
+
+  const maxMb = model?.max_upload_mb ?? DEFAULT_MAX_MB;
+  const maxBytes = maxMb * MB;
   const tooBig = FIELDS.find((f) => (files[f.name]?.size ?? 0) > maxBytes);
   const canSubmit = !!files.datasheet && !!files.telemetry && !tooBig && !running && model?.available !== false;
 
@@ -123,10 +149,15 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
     const ac = new AbortController();
     abortRef.current = ac;
     setRunning(true);
+    setPhase("uploading");
+    setStartedAt(Date.now());
+    setElapsed(0);
     setError(null);
     setResult(null);
     try {
-      const run = await createAnalysis(form, ac.signal);
+      const run = await createAnalysis(form, ac.signal, (job) =>
+        setPhase(job.status === "queued" ? "queued" : "running"),
+      );
       setResult(run);
       onCompleted(run);
     } catch (err) {
@@ -181,6 +212,7 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
                   {f.required ? <span className="req"> *</span> : <span className="opt"> optional</span>}
                 </span>
                 <input
+                  key={inputKeys[f.name] ?? 0}
                   type="file"
                   name={f.name}
                   accept={f.accept}
@@ -195,11 +227,25 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
                 />
                 <span className="file-help">
                   {over
-                    ? `Too large (${formatSize(file.size)}); the limit is ${model?.max_upload_mb} MB.`
+                    ? `Too large (${formatSize(file.size)}); the limit is ${maxMb} MB per file.`
                     : file
                       ? `${file.name} · ${formatSize(file.size)}`
-                      : f.help}
+                      : `${f.help} Max ${maxMb} MB.`}
                 </span>
+                {file && (
+                  <button
+                    type="button"
+                    className="file-remove link-btn"
+                    disabled={running}
+                    onClick={(e) => {
+                      e.preventDefault(); // inside the <label>: do not open the file chooser
+                      removeFile(f.name);
+                    }}
+                    aria-label={`Remove ${f.label.toLowerCase()} file ${file.name}`}
+                  >
+                    Remove
+                  </button>
+                )}
               </label>
             );
           })}
@@ -216,6 +262,13 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
           <input type="checkbox" checked={useMl} onChange={(e) => setUseMl(e.target.checked)} disabled={running} />
           <span>Use the ML diagnostician on top of the physics rules (recommended)</span>
         </label>
+
+        {running && phase !== "uploading" && (
+          <p className="hint" role="status">
+            The model runs on the server; large uploads can take a few minutes. Closing this window does not stop it —
+            the dashboard shows the new results after a refresh once it is done.
+          </p>
+        )}
 
         {error && (
           <div className="notice notice-error" role="alert">
@@ -258,7 +311,9 @@ export function AnalysisDialog({ open, onClose, onCompleted }: Props) {
               </button>
               <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
                 <Icon name={running ? "refresh" : "upload"} size={16} className={running ? "spin" : ""} />
-                {running ? "Running the model…" : "Run analysis"}
+                {running
+                  ? `${phase === "uploading" ? "Uploading" : phase === "queued" ? "Waiting for the model" : "Running the model"}… ${elapsed}s`
+                  : "Run analysis"}
               </button>
             </>
           )}

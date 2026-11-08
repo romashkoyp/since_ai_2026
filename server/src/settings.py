@@ -21,8 +21,8 @@ class Settings:
     cors_origins: list[str] = field(default_factory=list)
     mongodb_uri: str = ""
     mongodb_db: str = "since_ai"
-    # Largest accepted upload per file. Raw 1 Hz telemetry is big; 1-minute summaries are ~1 MB per pump-week.
-    max_upload_mb: float = 200.0
+    # Largest accepted upload per file (decimal MB). 1-minute summaries as Parquet are ~0.7 MB per pump-week.
+    max_upload_mb: float = 15.0
     # Optional: only alerts raised within this many hours before the pump's last reading set its status.
     # None (default) = the whole analysed period, so the status always agrees with the "Detected issues" card.
     active_alert_hours: float | None = None
@@ -45,7 +45,7 @@ def get_settings() -> Settings:
         cors_origins=[o.strip() for o in cors.split(",") if o.strip()],
         mongodb_uri=os.getenv("MONGODB_URI", "").strip(),
         mongodb_db=os.getenv("MONGODB_DB", "since_ai").strip() or "since_ai",
-        max_upload_mb=_float("MAX_UPLOAD_MB", 200.0),
+        max_upload_mb=_float("MAX_UPLOAD_MB", 15.0),
         active_alert_hours=_float("ACTIVE_ALERT_HOURS", 0.0) or None,
         energy_price_eur_kwh=_float("ENERGY_PRICE_EUR_KWH", 0.15),
         cooling_min_flow_fraction=_float("COOLING_MIN_FLOW_FRACTION", 0.8),

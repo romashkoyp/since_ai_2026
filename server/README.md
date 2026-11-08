@@ -49,7 +49,8 @@ Full guide with request/response examples, error codes and the severity and sand
 | GET | `/api/fault-guide` | what each of the 14 fault types means, urgency and steps (`src/data/fault_actions.json`) |
 | GET | `/api/scorecard` | retrofit business case (static) |
 | GET | `/api/model` | installed model, required datasheet columns, upload limit |
-| POST | `/api/analyses` | multipart upload → run the model → `201` run summary |
+| POST | `/api/analyses` | multipart upload → files checked → `202` job (model runs in the background) |
+| GET | `/api/analyses/jobs/{job_id}` | progress of an upload: queued / running / completed (with the run) / failed |
 | GET | `/api/analyses`, `/api/analyses/latest`, `/api/analyses/{run_id}` | run summaries |
 | GET | `/api/analyses/{run_id}/alerts.csv` | alerts in the organisers' template CSV |
 | GET/POST | `/retrofit/*` | the engine's own stateless endpoints (Kaleb's router) |
@@ -72,11 +73,22 @@ table (`asset_id, fault_type, onset_utc, end_utc`); when given, each alert gets 
 |---|---|---|
 | `MONGODB_URI`, `MONGODB_DB` | empty, `since_ai` | Atlas connection; empty = in-memory runs |
 | `CORS_ORIGINS` | localhost + VM | comma-separated |
-| `MAX_UPLOAD_MB` | 200 | per uploaded file |
+| `MAX_UPLOAD_MB` | 15 | per uploaded file (decimal MB; the dialog shows and enforces it too) |
 | `ACTIVE_ALERT_HOURS` | empty | empty = a pump's status uses every alert in the analysed period (matches "Detected issues"); a number = only alerts raised that many hours before its last reading |
 | `ENERGY_PRICE_EUR_KWH` | 0.15 | sandbox energy saving |
 | `COOLING_MIN_FLOW_FRACTION` | 0.8 | share of today's flow the cooled system needs (sandbox cooling margin) |
 | `SEED_RUN_PATH` | `seed/demo_run.json` | run loaded into an empty store |
+
+## Make files for the upload dialog
+
+```bash
+python ../retrofit/make_dataset.py --tier full --output /tmp/retrofit_full     # simulator, ~25 s (needs pyyaml)
+python -m scripts.make_upload_files --data /tmp/retrofit_full/public --out ~/Desktop/zerofault_upload
+```
+
+Writes `datasheet.csv`, `telemetry` / `baseline` / `context` as Parquet (same 1-minute data as CSV, identical results,
+~3x smaller: 9 pumps ≈ 20 MB), `snapshots.parquet` and `events.csv` (known faults → Correct / Wrong). Options:
+`--pumps PUMP-08 PUMP-09`, `--format csv`, `--baseline-hours 30`.
 
 ## Rebuild the demo seed run
 
@@ -103,7 +115,7 @@ docker run --rm -p 8000:8000 since-ai-server
 
 The VM's own nginx (in front of the containers) rejects request bodies over **1 MB by default**, which blocks
 `POST /api/analyses` with an HTML `413 Request Entity Too Large` page. On every VM whose nginx proxies `/api`
-(the frontend VM `since-ai-fe`), allow at least the API's `MAX_UPLOAD_MB` (200 MB per file, several files per
+(the frontend VM `since-ai-fe`), allow at least the API's `MAX_UPLOAD_MB` (15 MB per file, up to six files per
 upload) and give large raw files time to be analysed.
 
 **The deploy workflow (`.github/workflows/deploy.yml`) applies this automatically on every deploy** to each VM that
